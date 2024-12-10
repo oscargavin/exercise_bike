@@ -63,6 +63,8 @@ function App() {
     if (!isSessionActive) return;
     
     const now = new Date();
+    console.log(`Updating ${metric} with value: ${value}`);
+    
     setTimeSeriesData(prev => {
       const newData = {
         ...prev,
@@ -71,6 +73,7 @@ function App() {
           value: value
         }]
       };
+      console.log(`New data for ${metric}:`, newData[metric]);
       return newData;
     });
   }, [isSessionActive]);
@@ -190,13 +193,21 @@ function App() {
 
   const handleFitnessService = async (service) => {
     const characteristics = await service.getCharacteristics();
+    console.log('Available characteristics:', characteristics);
     
     for (const characteristic of characteristics) {
+      console.log('Characteristic found:', {
+        uuid: characteristic.uuid,
+        properties: characteristic.properties
+      });
+      
       if (characteristic.properties.notify) {
         await characteristic.startNotifications();
+        console.log('Started notifications for:', characteristic.uuid);
+        
         characteristic.addEventListener('characteristicvaluechanged', (event) => {
-          const value = event.target.value;
-          updateBikeData(value);
+          console.log('Received data from FTMS:', event.target.value);
+          updateBikeData(event.target.value);
         });
       }
     }
@@ -210,24 +221,55 @@ function App() {
   };
 
   const handleCscService = async (service) => {
-    const characteristic = await service.getCharacteristic(0x2A5B);
-    await characteristic.startNotifications();
-    characteristic.addEventListener('characteristicvaluechanged', (event) => {
-      const value = event.target.value;
-      updateBikeData(value);
-    });
+    try {
+      // CSC Measurement characteristic UUID
+      const cscMeasurementUUID = '00002a5b-0000-1000-8000-00805f9b34fb';
+      const characteristic = await service.getCharacteristic(cscMeasurementUUID);
+      
+      console.log('CSC characteristic found:', {
+        uuid: characteristic.uuid,
+        properties: characteristic.properties
+      });
+      
+      await characteristic.startNotifications();
+      console.log('Started CSC notifications');
+      
+      characteristic.addEventListener('characteristicvaluechanged', (event) => {
+        console.log('Received data from CSC:', event.target.value);
+        updateBikeData(event.target.value);
+      });
+    } catch (error) {
+      console.error('Error in CSC service:', error);
+      throw error;
+    }
   };
 
   const updateBikeData = (value) => {
-    const speed = value.getUint16(1, true) / 100;
-    const cadence = value.getUint16(3, true);
-    const power = value.getUint16(5, true);
-    const calories = value.getUint16(7, true);
-
-    updateMetric('speed', speed);
-    updateMetric('cadence', cadence);
-    updateMetric('power', power);
-    updateMetric('calories', calories);
+    try {
+      // Log the raw value
+      console.log('Raw value buffer:', value.buffer);
+      
+      // Get the data view for parsing
+      const dataView = value;
+      
+      // Log each parsed value
+      const parsedData = {
+        speed: dataView.getUint16(1, true) / 100,
+        cadence: dataView.getUint16(3, true),
+        power: dataView.getUint16(5, true),
+        calories: dataView.getUint16(7, true)
+      };
+      
+      console.log('Parsed data:', parsedData);
+      
+      // Update metrics
+      Object.entries(parsedData).forEach(([metric, value]) => {
+        updateMetric(metric, value);
+      });
+      
+    } catch (error) {
+      console.error('Error parsing bike data:', error);
+    }
   };
 
   const MetricGraph = ({ title, data, color, unit, isLive = true }) => (
