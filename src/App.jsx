@@ -100,78 +100,98 @@ function App() {
       setStatus('Requesting Bluetooth device...');
       
       if (!env.bluetoothAPI) {
-        if (env.isIOS) {
-          setStatus('Please use Bluefy browser for iOS Bluetooth support');
-        } else {
-          setStatus('Bluetooth not supported in this browser');
-        }
+        setStatus('Bluetooth API not available');
+        console.error('Bluetooth API not found:', { env });
         return;
       }
   
-      console.log('Connection attempt with:', {
+      // Detailed logging
+      console.log('Starting connection attempt:', {
         isIOS: env.isIOS,
         isBluefy: env.isBluefy,
         hasWebBluetooth: env.hasWebBluetooth,
-        usingAPI: env.isBluefy ? 'WebBLE' : 'Web Bluetooth'
+        usingAPI: env.isBluefy ? 'WebBLE' : 'Web Bluetooth',
+        availableAPI: env.bluetoothAPI
       });
   
-      const device = await env.bluetoothAPI.requestDevice({
+      // Modified request options for better iOS compatibility
+      const requestOptions = {
         filters: [
-          { namePrefix: 'iConsole' }
+          { namePrefix: 'iConsole' },
+          // Add more general filters as fallback
+          { services: ['fitness_machine'] },
+          { services: ['cycling_speed_and_cadence'] }
         ],
         optionalServices: [
+          'fitness_machine',
+          'cycling_speed_and_cadence',
           0x1826,  // Fitness Machine Service
           0x1818,  // Cycling Speed and Cadence
-          0x2A5B,  // CSC Measurement
-          'fitness_machine',
-          'cycling_speed_and_cadence'
+          0x2A5B   // CSC Measurement
         ]
-      });
+      };
   
-      setStatus(`Device selected: ${device.name}`);
+      console.log('Requesting device with options:', requestOptions);
+      const device = await env.bluetoothAPI.requestDevice(requestOptions);
       
-      device.addEventListener('gattserverdisconnected', handleDisconnect);
+      if (!device) {
+        throw new Error('No device selected');
+      }
   
-      setStatus('Connecting to device...');
+      console.log('Device selected:', device);
+      setStatus(`Device selected: ${device.name || 'Unknown device'}`);
+  
+      // Add error handling for the gatt connection
+      if (!device.gatt) {
+        throw new Error('GATT server not found on device');
+      }
+  
+      setStatus('Connecting to GATT server...');
       const server = await device.gatt.connect();
-      
+      console.log('GATT server connected:', server);
+  
       let serviceType;
       try {
+        console.log('Attempting FTMS connection...');
         const service = await server.getPrimaryService(0x1826);
         await handleFitnessService(service);
         serviceType = 'Fitness Machine';
         setStatus('Connected to Fitness Machine Service');
       } catch (e) {
-        console.log('FTMS not found, trying CSC service...', e);
+        console.log('FTMS failed, trying CSC service...', e);
         try {
           const service = await server.getPrimaryService(0x1818);
           await handleCscService(service);
           serviceType = 'Cycling Speed and Cadence';
           setStatus('Connected to Cycling Speed and Cadence Service');
         } catch (e) {
-          console.error('No compatible services found:', e);
-          throw new Error('No compatible fitness services found on device');
+          console.error('Service connection failed:', e);
+          throw new Error('No compatible services found');
         }
       }
   
       setDeviceInfo({
-        name: device.name,
+        name: device.name || 'Unknown device',
         id: device.id,
         connected: true,
         serviceType,
-        device // Store the device object for disconnecting later
+        device
       });
       
       setIsConnected(true);
   
     } catch (error) {
-      console.error('Connection error:', error);
-      setStatus(`Error: ${error.message}`);
+      console.error('Detailed connection error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      setStatus(`Connection failed: ${error.message || 'Unknown error'}`);
       setIsConnected(false);
       setDeviceInfo(null);
     }
   };
-  
+
   const handleDisconnect = async () => {
     try {
       if (deviceInfo?.device?.gatt?.connected) {
@@ -297,7 +317,7 @@ function App() {
       </div>
     );
   };
-  
+
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
