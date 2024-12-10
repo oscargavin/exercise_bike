@@ -75,61 +75,113 @@ function App() {
     });
   }, [isSessionActive]);
 
+  const detectEnvironment = () => {
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isBluefy = navigator.WebBLE !== undefined;
+    const hasWebBluetooth = navigator.bluetooth !== undefined;
+    
+    return {
+      isIOS,
+      isBluefy,
+      hasWebBluetooth,
+      // Return the appropriate Bluetooth API to use
+      bluetoothAPI: isBluefy ? navigator.WebBLE : navigator.bluetooth
+    };
+  };
+
   const connectToBike = async () => {
     try {
+      const env = detectEnvironment();
       setStatus('Requesting Bluetooth device...');
       
-      if (!navigator.bluetooth) {
-        setStatus('Bluetooth not supported');
+      if (!env.bluetoothAPI) {
+        if (env.isIOS) {
+          setStatus('Please use Bluefy browser for iOS Bluetooth support');
+        } else {
+          setStatus('Bluetooth not supported in this browser');
+        }
         return;
       }
-
-      const device = await navigator.bluetooth.requestDevice({
+  
+      console.log('Connection attempt with:', {
+        isIOS: env.isIOS,
+        isBluefy: env.isBluefy,
+        hasWebBluetooth: env.hasWebBluetooth,
+        usingAPI: env.isBluefy ? 'WebBLE' : 'Web Bluetooth'
+      });
+  
+      const device = await env.bluetoothAPI.requestDevice({
         filters: [
           { namePrefix: 'iConsole' }
         ],
         optionalServices: [
-          0x1826,
-          0x1818,
-          0x2A5B,
+          0x1826,  // Fitness Machine Service
+          0x1818,  // Cycling Speed and Cadence
+          0x2A5B,  // CSC Measurement
           'fitness_machine',
           'cycling_speed_and_cadence'
         ]
       });
-
+  
       setStatus(`Device selected: ${device.name}`);
       
       device.addEventListener('gattserverdisconnected', handleDisconnect);
-
+  
+      setStatus('Connecting to device...');
       const server = await device.gatt.connect();
       
+      let serviceType;
       try {
         const service = await server.getPrimaryService(0x1826);
         await handleFitnessService(service);
+        serviceType = 'Fitness Machine';
         setStatus('Connected to Fitness Machine Service');
       } catch (e) {
-        const service = await server.getPrimaryService(0x1818);
-        await handleCscService(service);
-        setStatus('Connected to CSC Service');
+        console.log('FTMS not found, trying CSC service...', e);
+        try {
+          const service = await server.getPrimaryService(0x1818);
+          await handleCscService(service);
+          serviceType = 'Cycling Speed and Cadence';
+          setStatus('Connected to Cycling Speed and Cadence Service');
+        } catch (e) {
+          console.error('No compatible services found:', e);
+          throw new Error('No compatible fitness services found on device');
+        }
       }
-
+  
       setDeviceInfo({
         name: device.name,
-        id: device.id
+        id: device.id,
+        connected: true,
+        serviceType,
+        device // Store the device object for disconnecting later
       });
       
       setIsConnected(true);
+  
     } catch (error) {
+      console.error('Connection error:', error);
       setStatus(`Error: ${error.message}`);
       setIsConnected(false);
       setDeviceInfo(null);
     }
   };
-
-  const handleDisconnect = () => {
-    setStatus('Device disconnected');
-    setIsConnected(false);
-    setDeviceInfo(null);
+  
+  const handleDisconnect = async () => {
+    try {
+      if (deviceInfo?.device?.gatt?.connected) {
+        await deviceInfo.device.gatt.disconnect();
+      }
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+    } finally {
+      setStatus('Device disconnected');
+      setIsConnected(false);
+      setDeviceInfo(null);
+      if (isSessionActive) {
+        endSession();
+      }
+    }
   };
 
   const handleFitnessService = async (service) => {
@@ -144,6 +196,13 @@ function App() {
         });
       }
     }
+  };
+
+  const disconnect = async () => {
+    if (deviceInfo?.gatt) {
+      await deviceInfo.gatt.disconnect();
+    }
+    handleDisconnect();
   };
 
   const handleCscService = async (service) => {
@@ -198,11 +257,54 @@ function App() {
     </div>
   );
 
+  // In your render method, add a device-specific message
+const DeviceMessage = () => {
+  const env = detectEnvironment();
+  
+  if (env.isBluefy) {
+    return (
+      <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
+        <p>Using Bluefy - Web Bluetooth is supported! ✅</p>
+      </div>
+    );
+  }
+  
+  if (env.isIOS && !env.isBluefy) {
+    return (
+      <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
+        <p className="font-bold">iOS Device Detected</p>
+        <p>To connect to your bike:</p>
+        <ol className="list-decimal ml-4 mt-2">
+          <li>Download Bluefy browser (free) from the App Store</li>
+          <li>Open this page in Bluefy</li>
+          <li>Enable Web Bluetooth in Bluefy settings</li>
+        </ol>
+      </div>
+    );
+  }
+  
+  if (!env.hasWebBluetooth && !env.isBluefy) {
+    return (
+      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+        <p>Your browser doesn't support Web Bluetooth.</p>
+        <p>Please use Chrome, Edge, or Bluefy (iOS).</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
+      <p>Web Bluetooth is supported in your browser! ✅</p>
+    </div>
+  );
+};
+
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold text-white mb-8">Bike Connect</h1>
         
+        <DeviceMessage />
         {/* Status and Controls */}
         <div className="bg-white rounded-lg p-6 shadow-lg mb-6">
           <h2 className="text-xl font-semibold mb-2">Status</h2>
