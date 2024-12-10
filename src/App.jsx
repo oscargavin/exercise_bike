@@ -114,23 +114,20 @@ function App() {
         availableAPI: env.bluetoothAPI
       });
   
-      // Modified request options for better iOS compatibility
+      // Modified request options for Bluefy compatibility
       const requestOptions = {
         filters: [
           { namePrefix: 'iConsole' },
-          // Add more general filters as fallback
-          { services: ['fitness_machine'] },
-          { services: ['cycling_speed_and_cadence'] }
+          { services: [0x1826] },  // Fitness Machine Service UUID
+          { services: [0x1818] }   // Cycling Speed and Cadence UUID
         ],
         optionalServices: [
-          'fitness_machine',
-          'cycling_speed_and_cadence',
           0x1826,  // Fitness Machine Service
           0x1818,  // Cycling Speed and Cadence
           0x2A5B   // CSC Measurement
         ]
       };
-  
+
       console.log('Requesting device with options:', requestOptions);
       const device = await env.bluetoothAPI.requestDevice(requestOptions);
       
