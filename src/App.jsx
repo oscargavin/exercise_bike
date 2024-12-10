@@ -77,15 +77,20 @@ function App() {
 
   const detectEnvironment = () => {
     const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    const isBluefy = navigator.WebBLE !== undefined;
+    // Update Bluefy detection to check for both WebBLE and window.webkit
+    const isBluefy = navigator.WebBLE !== undefined || 
+                     (window.webkit && window.webkit.messageHandlers && 
+                      window.webkit.messageHandlers.bluetooth !== undefined);
     const hasWebBluetooth = navigator.bluetooth !== undefined;
     
     return {
       isIOS,
       isBluefy,
       hasWebBluetooth,
-      // Return the appropriate Bluetooth API to use
-      bluetoothAPI: isBluefy ? navigator.WebBLE : navigator.bluetooth
+      // Update Bluetooth API detection
+      bluetoothAPI: isBluefy ? 
+        (navigator.WebBLE || window.webkit.messageHandlers.bluetooth) : 
+        navigator.bluetooth
     };
   };
 
@@ -257,48 +262,42 @@ function App() {
     </div>
   );
 
-  // In your render method, add a device-specific message
-const DeviceMessage = () => {
-  const env = detectEnvironment();
-  
-  if (env.isBluefy) {
+  const DeviceMessage = () => {
+    const env = detectEnvironment();
+    
+    if (env.isBluefy || (env.isIOS && env.hasWebBluetooth)) {
+      return (
+        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
+          <p>Bluetooth support detected! Ready to connect ✅</p>
+        </div>
+      );
+    }
+    
+    if (env.isIOS && !env.hasWebBluetooth) {
+      return (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
+          <p className="font-bold">Enable Bluetooth</p>
+          <p>Please ensure Bluetooth is enabled in your device settings and Web Bluetooth is enabled in Bluefy settings.</p>
+        </div>
+      );
+    }
+    
+    if (!env.hasWebBluetooth) {
+      return (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+          <p>Your browser doesn't support Web Bluetooth.</p>
+          <p>Please use Chrome, Edge, or Bluefy (iOS).</p>
+        </div>
+      );
+    }
+    
     return (
       <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-        <p>Using Bluefy - Web Bluetooth is supported! ✅</p>
+        <p>Web Bluetooth is supported in your browser! ✅</p>
       </div>
     );
-  }
+  };
   
-  if (env.isIOS && !env.isBluefy) {
-    return (
-      <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
-        <p className="font-bold">iOS Device Detected</p>
-        <p>To connect to your bike:</p>
-        <ol className="list-decimal ml-4 mt-2">
-          <li>Download Bluefy browser (free) from the App Store</li>
-          <li>Open this page in Bluefy</li>
-          <li>Enable Web Bluetooth in Bluefy settings</li>
-        </ol>
-      </div>
-    );
-  }
-  
-  if (!env.hasWebBluetooth && !env.isBluefy) {
-    return (
-      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
-        <p>Your browser doesn't support Web Bluetooth.</p>
-        <p>Please use Chrome, Edge, or Bluefy (iOS).</p>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-      <p>Web Bluetooth is supported in your browser! ✅</p>
-    </div>
-  );
-};
-
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
