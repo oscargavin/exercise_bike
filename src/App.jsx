@@ -105,32 +105,20 @@ function App() {
         return;
       }
   
-      // Detailed logging
-      console.log('Starting connection attempt:', {
-        isIOS: env.isIOS,
-        isBluefy: env.isBluefy,
-        hasWebBluetooth: env.hasWebBluetooth,
-        usingAPI: env.isBluefy ? 'WebBLE' : 'Web Bluetooth',
-        availableAPI: env.bluetoothAPI
-      });
-  
-      // Modified request options for Bluefy compatibility
+      // Simplified request options for better Bluefy compatibility
       const requestOptions = {
         filters: [
-          { namePrefix: 'iConsole' },
-          { services: [0x1826] },  // Fitness Machine Service UUID
-          { services: [0x1818] }   // Cycling Speed and Cadence UUID
+          { namePrefix: 'iConsole' }
         ],
         optionalServices: [
-          0x1826,  // Fitness Machine Service
-          0x1818,  // Cycling Speed and Cadence
-          0x2A5B   // CSC Measurement
+          '00001826-0000-1000-8000-00805f9b34fb', // Fitness Machine Service (full UUID)
+          '00001818-0000-1000-8000-00805f9b34fb'  // Cycling Speed and Cadence (full UUID)
         ]
       };
-
+  
       console.log('Requesting device with options:', requestOptions);
       const device = await env.bluetoothAPI.requestDevice(requestOptions);
-      
+  
       if (!device) {
         throw new Error('No device selected');
       }
@@ -138,26 +126,20 @@ function App() {
       console.log('Device selected:', device);
       setStatus(`Device selected: ${device.name || 'Unknown device'}`);
   
-      // Add error handling for the gatt connection
-      if (!device.gatt) {
-        throw new Error('GATT server not found on device');
-      }
-  
       setStatus('Connecting to GATT server...');
       const server = await device.gatt.connect();
-      console.log('GATT server connected:', server);
   
+      // Try to get the service using full UUID
       let serviceType;
       try {
-        console.log('Attempting FTMS connection...');
-        const service = await server.getPrimaryService(0x1826);
+        const service = await server.getPrimaryService('00001826-0000-1000-8000-00805f9b34fb');
         await handleFitnessService(service);
         serviceType = 'Fitness Machine';
         setStatus('Connected to Fitness Machine Service');
       } catch (e) {
         console.log('FTMS failed, trying CSC service...', e);
         try {
-          const service = await server.getPrimaryService(0x1818);
+          const service = await server.getPrimaryService('00001818-0000-1000-8000-00805f9b34fb');
           await handleCscService(service);
           serviceType = 'Cycling Speed and Cadence';
           setStatus('Connected to Cycling Speed and Cadence Service');
