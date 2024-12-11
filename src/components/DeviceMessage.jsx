@@ -1,37 +1,58 @@
 import { detectEnvironment } from '../utils/environment';
+import { Bluetooth, XCircle, CheckCircle } from 'lucide-react';
 
 export const DeviceMessage = () => {
   const env = detectEnvironment();
   
-  if (env.isBluefy || (env.isIOS && env.hasWebBluetooth)) {
-    return (
-      <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-        <p>Bluetooth support detected! Ready to connect ✅</p>
-      </div>
-    );
-  }
-  
-  if (env.isIOS && !env.hasWebBluetooth) {
-    return (
-      <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
-        <p className="font-bold">Enable Bluetooth</p>
-        <p>Please ensure Bluetooth is enabled in your device settings and Web Bluetooth is enabled in Bluefy settings.</p>
-      </div>
-    );
-  }
-  
-  if (!env.hasWebBluetooth) {
-    return (
-      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
-        <p>Your browser doesn't support Web Bluetooth.</p>
-        <p>Please use Chrome, Edge, or Bluefy (iOS).</p>
-      </div>
-    );
-  }
-  
+  const getStatusInfo = () => {
+    if (env.isBluefy || (env.isIOS && env.hasWebBluetooth)) {
+      return {
+        icon: <CheckCircle className="w-4 h-4 text-green-500" />,
+        message: "Bluetooth support detected! Ready to connect",
+        color: "text-green-500",
+        tooltipColor: "bg-green-900"
+      };
+    }
+    
+    if (env.isIOS && !env.hasWebBluetooth) {
+      return {
+        icon: <XCircle className="w-4 h-4 text-yellow-500" />,
+        message: "Enable Bluetooth in device settings and Web Bluetooth in Bluefy settings",
+        color: "text-yellow-500",
+        tooltipColor: "bg-yellow-900"
+      };
+    }
+    
+    if (!env.hasWebBluetooth) {
+      return {
+        icon: <XCircle className="w-4 h-4 text-red-500" />,
+        message: "Browser doesn't support Web Bluetooth. Use Chrome, Edge, or Bluefy (iOS)",
+        color: "text-red-500",
+        tooltipColor: "bg-red-900"
+      };
+    }
+    
+    return {
+      icon: <CheckCircle className="w-4 h-4 text-green-500" />,
+      message: "Web Bluetooth is supported in your browser",
+      color: "text-green-500",
+      tooltipColor: "bg-green-900"
+    };
+  };
+
+  const status = getStatusInfo();
+
   return (
-    <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-      <p>Web Bluetooth is supported in your browser! ✅</p>
+    <div className="relative flex items-center group">
+      <Bluetooth className={`w-5 h-5 ${status.color}`} />
+      {status.icon}
+      
+      {/* Tooltip */}
+      <div className={`absolute hidden group-hover:block right-0 top-full mt-2 p-2 ${status.tooltipColor} text-white text-sm rounded-md whitespace-nowrap z-50`}>
+        {status.message}
+        {/* Tooltip arrow */}
+        <div className={`absolute -top-1 right-4 w-2 h-2 ${status.tooltipColor} transform rotate-45`}></div>
+      </div>
     </div>
   );
 };
