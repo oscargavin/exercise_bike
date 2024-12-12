@@ -4,13 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"node server.mjs\"",
+    "build": "vite build",
     "start": "node server.mjs",
-    "build": "vite build && cp server.mjs dist/",
-    "postbuild": "node setup-db.mjs",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "setup-db": "node setup-db.mjs"
+    "postbuild": "node setup-db.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",

@@ -3,22 +3,29 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
+  base: "/",
   plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: "dist",
+    assetsDir: "assets",
+    sourcemap: true,
+    emptyOutDir: true,
+  },
   server: {
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:3001", // Note: Changed from 3000 to 3001 to match our backend
+        target: "http://localhost:3001",
         changeOrigin: true,
         secure: false,
         ws: true,
         configure: (proxy, _options) => {
-          proxy.on("error", (err, _req, _res) => {
+          proxy.on("error", (err, req, res) => {
             console.log("proxy error", err);
           });
           proxy.on("proxyReq", (proxyReq, req, _res) => {
@@ -36,8 +43,11 @@ export default defineConfig({
     },
   },
   define: {
-    "process.env.POSTGRES_URL": JSON.stringify(process.env.POSTGRES_URL),
-    "process.env.DATABASE_URL": JSON.stringify(process.env.DATABASE_URL),
-    "process.env.JWT_SECRET": JSON.stringify(process.env.JWT_SECRET),
+    "process.env": {
+      POSTGRES_URL: JSON.stringify(process.env.POSTGRES_URL),
+      DATABASE_URL: JSON.stringify(process.env.DATABASE_URL),
+      JWT_SECRET: JSON.stringify(process.env.JWT_SECRET),
+      NODE_ENV: JSON.stringify(process.env.NODE_ENV),
+    },
   },
 });
