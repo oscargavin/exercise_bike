@@ -12,7 +12,8 @@ config();
 
 // Create a database client
 const client = createClient({
-  connectionString: process.env.PROD_POSTGRES_URL,
+  connectionString:
+    process.env.POSTGRES_URL_NON_POOLING || process.env.PROD_POSTGRES_URL,
 });
 
 console.log("Database connection check:", {
