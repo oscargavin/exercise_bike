@@ -12,7 +12,7 @@ config();
 
 // Create a database client
 const client = createClient({
-  connectionString: process.env.POSTGRES_URL,
+  connectionString: process.env.PROD_POSTGRES_URL,
 });
 
 console.log("Database connection check:", {
