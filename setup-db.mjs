@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 
 config({ path: path.resolve(__dirname, ".env") });
 
+// Comment
 console.log("Starting database setup...");
 console.log("Environment:", process.env.VERCEL_ENV || "local");
 console.log("Environment check:", {
