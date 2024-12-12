@@ -31,7 +31,7 @@ const client = createClient({
 
 console.log("Environment check:", {
   POSTGRES_URL: !!process.env.POSTGRES_URL,
-  JWT_SECRET: !!process.env.JWT_SECRET,
+  JWT_SECRET: !!process.env.PROD_JWT_SECRET,
 });
 
 const app = express();
@@ -146,7 +146,7 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user.id }, process.env.PROD_JWT_SECRET, {
       expiresIn: "24h",
     });
 
@@ -187,7 +187,7 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.PROD_JWT_SECRET);
     console.log("Token decoded successfully:", decoded);
     req.userId = decoded.userId;
     next();
