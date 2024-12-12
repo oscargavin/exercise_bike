@@ -10,30 +10,23 @@ import crypto from "crypto";
 // Load environment variables
 config();
 
-// Create a database client
-const client = createClient({
-  connectionString: process.env.PROD_DATABASE_URL_UNPOOLED, // for non-pooled connection
-});
-
-// Add some debugging
-console.log("Database URL check:", {
-  hasUnpooledUrl: !!process.env.PROD_DATABASE_URL_UNPOOLED,
-  envType: process.env.VERCEL_ENV,
-});
-
-console.log("Environment variables:", {
-  hasPostgresUrl: !!process.env.POSTGRES_URL,
-  hasPostgresNonPooling: !!process.env.POSTGRES_URL_NON_POOLING,
-  hasProdPostgresUrl: !!process.env.PROD_POSTGRES_URL,
-});
-
-// Validate required environment variables
-const requiredEnvVars = ["POSTGRES_URL", "JWT_SECRET"];
+// Update the required env vars check
+const requiredEnvVars = ["PROD_DATABASE_URL_UNPOOLED", "PROD_JWT_SECRET"]; // Changed from POSTGRES_URL
 
 requiredEnvVars.forEach((varName) => {
   if (!process.env[varName]) {
     throw new Error(`Missing required environment variable: ${varName}`);
   }
+});
+
+console.log("Environment check:", {
+  DATABASE_URL: !!process.env.PROD_DATABASE_URL_UNPOOLED, // Updated to match our env var
+  JWT_SECRET: !!process.env.PROD_JWT_SECRET,
+});
+
+// And update the client creation accordingly
+const client = createClient({
+  connectionString: process.env.PROD_DATABASE_URL_UNPOOLED,
 });
 
 console.log("Environment check:", {
