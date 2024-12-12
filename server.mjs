@@ -1,6 +1,6 @@
 import express from "express";
 import { config } from "dotenv";
-import { sql, createPool } from "@vercel/postgres";
+import { createClient } from "@vercel/postgres";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cors from "cors";
@@ -10,8 +10,8 @@ import crypto from "crypto";
 // Load environment variables
 config();
 
-// Create a connection pool
-const pool = createPool({
+// Create a database client
+const client = createClient({
   connectionString: process.env.POSTGRES_URL,
 });
 
@@ -48,7 +48,7 @@ app.get("/api/test", (req, res) => {
 // Database test route
 app.get("/api/test-db", async (req, res) => {
   try {
-    const result = await pool.query("SELECT NOW()");
+    const result = await client.query("SELECT NOW()");
     res.json({ status: "Database connected", timestamp: result.rows[0] });
   } catch (error) {
     console.error("Database test error:", error);
@@ -82,7 +82,7 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     // Check if user exists
-    const existingUser = await pool.query(
+    const existingUser = await client.query(
       "SELECT id FROM users WHERE email = $1",
       [email]
     );
@@ -94,7 +94,7 @@ app.post("/api/auth/register", async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    const result = await pool.query(
+    const result = await client.query(
       `INSERT INTO users (
         email, password_hash, name, age, height, weight
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -131,7 +131,7 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+    const result = await client.query("SELECT * FROM users WHERE email = $1", [
       email,
     ]);
 
@@ -200,7 +200,7 @@ const verifyToken = (req, res, next) => {
 // Get user profile
 app.get("/api/user/profile", verifyToken, async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await client.query(
       "SELECT id, email, name, age, height, weight, profile_picture FROM users WHERE id = $1",
       [req.userId]
     );
@@ -221,7 +221,7 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
   try {
     const { name, age, height, weight, profilePicture } = req.body;
 
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE users
        SET name = COALESCE($1, name),
            age = COALESCE($2, age),
@@ -265,7 +265,7 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       });
     }
 
-    const result = await pool.query(
+    const result = await client.query(
       `INSERT INTO exercise_sessions (user_id, start_time, end_time, metrics_data)
        VALUES ($1, $2, $3, $4)
        RETURNING id, start_time, end_time, metrics_data`,
@@ -297,7 +297,7 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const result = await pool.query(
+    const result = await client.query(
       `SELECT id, start_time, end_time, metrics_data
        FROM exercise_sessions
        WHERE user_id = $1
@@ -327,51 +327,12 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
   }
 });
 
-// Test routes
-app.get("/api/healthcheck", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-app.get("/api/protected-test", verifyToken, (req, res) => {
-  res.json({
-    status: "ok",
-    userId: req.userId,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Debug route
-app.get("/api/debug/user-check", verifyToken, async (req, res) => {
-  try {
-    console.log("Checking user:", req.userId);
-    const userResult = await pool.query(
-      "SELECT id, email, name FROM users WHERE id = $1",
-      [req.userId]
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({
-        message: "User not found in database",
-        checkedId: req.userId,
-      });
-    }
-
-    res.json({
-      message: "User found",
-      user: userResult.rows[0],
-    });
-  } catch (error) {
-    console.error("Error checking user:", error);
-    res.status(500).json({ message: "Error checking user" });
-  }
-});
-
 // Password reset routes
 app.post("/api/auth/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await pool.query(
+    const user = await client.query(
       "SELECT id, email FROM users WHERE email = $1",
       [email]
     );
@@ -386,7 +347,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-    await pool.query(
+    await client.query(
       `UPDATE users 
        SET reset_token = $1,
            reset_token_expiry = $2
@@ -414,7 +375,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    const user = await pool.query(
+    const user = await client.query(
       `SELECT id 
        FROM users 
        WHERE reset_token = $1
@@ -439,7 +400,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
-    await pool.query(
+    await client.query(
       `UPDATE users 
        SET password_hash = $1,
            reset_token = NULL,
@@ -455,11 +416,25 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 
+// Test routes
+app.get("/api/healthcheck", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.get("/api/protected-test", verifyToken, (req, res) => {
+  res.json({
+    status: "ok",
+    userId: req.userId,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 const PORT = process.env.PORT || 3001;
 
 async function testDbConnection() {
   try {
-    const result = await pool.query("SELECT NOW()");
+    await client.connect(); // Important: connect before using
+    const result = await client.query("SELECT NOW()");
     console.log("Database connection successful:", result.rows[0]);
     return true;
   } catch (error) {
