@@ -1,6 +1,6 @@
 import express from "express";
 import { config } from "dotenv";
-import { sql } from "@vercel/postgres";
+import { sql, createPool } from "@vercel/postgres";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cors from "cors";
@@ -9,6 +9,11 @@ import crypto from "crypto";
 
 // Load environment variables
 config();
+
+// Create a connection pool
+const pool = createPool({
+  connectionString: process.env.POSTGRES_URL,
+});
 
 console.log("Database connection check:", {
   hasPostgresUrl: !!process.env.PROD_POSTGRES_URL,
@@ -31,7 +36,6 @@ console.log("Environment check:", {
 
 const app = express();
 
-// Update these lines at the top of server.mjs
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cors());
@@ -44,7 +48,7 @@ app.get("/api/test", (req, res) => {
 // Database test route
 app.get("/api/test-db", async (req, res) => {
   try {
-    const result = await sql`SELECT NOW();`;
+    const result = await pool.query("SELECT NOW()");
     res.json({ status: "Database connected", timestamp: result.rows[0] });
   } catch (error) {
     console.error("Database test error:", error);
@@ -52,7 +56,7 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
-// Update the register endpoint in server.mjs
+// Register endpoint
 app.post("/api/auth/register", async (req, res) => {
   try {
     console.log("Registration attempt started");
@@ -60,17 +64,15 @@ app.post("/api/auth/register", async (req, res) => {
 
     console.log("Database connection check in register:", {
       hasUrl: !!process.env.POSTGRES_URL,
-      email: email, // don't log password
+      email: email,
     });
 
-    // Validate input
     if (!email || !password || !name) {
       return res.status(400).json({
         message: "Email, password, and name are required",
       });
     }
 
-    // Validate password
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
       return res.status(400).json({
@@ -80,38 +82,32 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     // Check if user exists
-    const existingUser = await sql`
-        SELECT id FROM users WHERE email = ${email}
-      `;
+    const existingUser = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
 
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create user
-    const result = await sql`
-        INSERT INTO users (
-          email, 
-          password_hash, 
-          name, 
-          age, 
-          height, 
-          weight
-        )
-        VALUES (
-          ${email}, 
-          ${passwordHash}, 
-          ${name}, 
-          ${parseInt(age)}, 
-          ${parseFloat(height)}, 
-          ${parseFloat(weight)}
-        )
-        RETURNING id, email, name, age, height, weight, created_at
-      `;
+    const result = await pool.query(
+      `INSERT INTO users (
+        email, password_hash, name, age, height, weight
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, email, name, age, height, weight, created_at`,
+      [
+        email,
+        passwordHash,
+        name,
+        parseInt(age),
+        parseFloat(height),
+        parseFloat(weight),
+      ]
+    );
 
     res.status(201).json({
       message: "User created successfully",
@@ -130,14 +126,14 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-// Update your login endpoint in server.mjs
+// Login endpoint
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const result = await sql`
-        SELECT * FROM users WHERE email = ${email}
-      `;
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -150,12 +146,10 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Create token
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
       expiresIn: "24h",
     });
 
-    // Return user data without password_hash
     const userData = {
       id: user.id,
       email: user.email,
@@ -176,29 +170,29 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// Update your verifyToken middleware in server.mjs
+// Token verification middleware
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  console.log("Auth Header:", authHeader); // Debug line
+  console.log("Auth Header:", authHeader);
 
   if (!authHeader) {
-    console.log("No authorization header"); // Debug line
+    console.log("No authorization header");
     return res.status(401).json({ message: "No token provided" });
   }
 
   const token = authHeader.split(" ")[1];
   if (!token) {
-    console.log("No token in auth header"); // Debug line
+    console.log("No token in auth header");
     return res.status(401).json({ message: "No token provided" });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Token decoded successfully:", decoded); // Debug line
+    console.log("Token decoded successfully:", decoded);
     req.userId = decoded.userId;
     next();
   } catch (error) {
-    console.error("Token verification failed:", error); // Debug line
+    console.error("Token verification failed:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -206,11 +200,10 @@ const verifyToken = (req, res, next) => {
 // Get user profile
 app.get("/api/user/profile", verifyToken, async (req, res) => {
   try {
-    const result = await sql`
-        SELECT id, email, name, age, height, weight, profile_picture
-        FROM users
-        WHERE id = ${req.userId}
-      `;
+    const result = await pool.query(
+      "SELECT id, email, name, age, height, weight, profile_picture FROM users WHERE id = $1",
+      [req.userId]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
@@ -228,19 +221,18 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
   try {
     const { name, age, height, weight, profilePicture } = req.body;
 
-    // Update user data
-    const result = await sql`
-        UPDATE users
-        SET 
-          name = COALESCE(${name}, name),
-          age = COALESCE(${age}, age),
-          height = COALESCE(${height}, height),
-          weight = COALESCE(${weight}, weight),
-          profile_picture = COALESCE(${profilePicture}, profile_picture),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${req.userId}
-        RETURNING id, email, name, age, height, weight, profile_picture
-      `;
+    const result = await pool.query(
+      `UPDATE users
+       SET name = COALESCE($1, name),
+           age = COALESCE($2, age),
+           height = COALESCE($3, height),
+           weight = COALESCE($4, weight),
+           profile_picture = COALESCE($5, profile_picture),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6
+       RETURNING id, email, name, age, height, weight, profile_picture`,
+      [name, age, height, weight, profilePicture, req.userId]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
@@ -253,9 +245,7 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
   }
 });
 
-// Add these routes to your server.mjs
-
-// Update your session route in server.mjs
+// Session routes
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
     console.log("Received session save request. Body:", req.body);
@@ -275,72 +265,53 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       });
     }
 
-    console.log("Attempting to save session to database with data:", {
-      userId: req.userId,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
-      metricsDataType: typeof metricsData,
-    });
-
-    const result = await sql`
-        INSERT INTO exercise_sessions (
-          user_id, 
-          start_time, 
-          end_time, 
-          metrics_data
-        )
-        VALUES (
-          ${req.userId}, 
-          ${new Date(startTime)}, 
-          ${new Date(endTime)}, 
-          ${JSON.stringify(metricsData)}
-        )
-        RETURNING id, start_time, end_time, metrics_data
-      `;
-
-    console.log("Session saved successfully:", result.rows[0]);
+    const result = await pool.query(
+      `INSERT INTO exercise_sessions (user_id, start_time, end_time, metrics_data)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, start_time, end_time, metrics_data`,
+      [
+        req.userId,
+        new Date(startTime),
+        new Date(endTime),
+        JSON.stringify(metricsData),
+      ]
+    );
 
     res.status(201).json({
       message: "Session saved successfully",
       session: result.rows[0],
     });
   } catch (error) {
-    console.error("Error saving session. Full error:", error);
+    console.error("Error saving session:", error);
     res.status(500).json({
       message: "Error saving session",
       error: error.message,
-      details: error.toString(),
     });
   }
 });
 
-// Get user's exercise sessions with pagination
-// Update this route in your server.mjs
+// Get sessions
 app.get("/api/sessions", verifyToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Get paginated sessions
-    const result = await sql`
-        SELECT id, start_time, end_time, metrics_data
-        FROM exercise_sessions
-        WHERE user_id = ${req.userId}
-        ORDER BY start_time DESC
-        LIMIT ${limit} 
-        OFFSET ${offset}
-      `;
+    const result = await pool.query(
+      `SELECT id, start_time, end_time, metrics_data
+       FROM exercise_sessions
+       WHERE user_id = $1
+       ORDER BY start_time DESC
+       LIMIT $2 OFFSET $3`,
+      [req.userId, limit, offset]
+    );
 
-    // Transform the data to match the expected format
     const formattedSessions = result.rows.map((session) => ({
       id: session.id,
       startTime: session.start_time,
       endTime: session.end_time,
-      data: session.metrics_data, // This contains speed, cadence, power, calories
+      data: session.metrics_data,
     }));
-
-    console.log("Formatted sessions:", formattedSessions);
 
     res.json({
       sessions: formattedSessions,
@@ -356,12 +327,11 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
   }
 });
 
-// Test route that doesn't require auth
+// Test routes
 app.get("/api/healthcheck", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Test route that requires auth
 app.get("/api/protected-test", verifyToken, (req, res) => {
   res.json({
     status: "ok",
@@ -370,15 +340,14 @@ app.get("/api/protected-test", verifyToken, (req, res) => {
   });
 });
 
-// Add this debug route to check user data
+// Debug route
 app.get("/api/debug/user-check", verifyToken, async (req, res) => {
   try {
     console.log("Checking user:", req.userId);
-    const userResult = await sql`
-        SELECT id, email, name 
-        FROM users 
-        WHERE id = ${req.userId}
-      `;
+    const userResult = await pool.query(
+      "SELECT id, email, name FROM users WHERE id = $1",
+      [req.userId]
+    );
 
     if (userResult.rows.length === 0) {
       return res.status(404).json({
@@ -397,45 +366,39 @@ app.get("/api/debug/user-check", verifyToken, async (req, res) => {
   }
 });
 
-// Add these endpoints to server.mjs
-
-// Generate and store reset token
+// Password reset routes
 app.post("/api/auth/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Check if user exists
-    const user = await sql`
-        SELECT id, email FROM users WHERE email = ${email}
-      `;
+    const user = await pool.query(
+      "SELECT id, email FROM users WHERE email = $1",
+      [email]
+    );
 
     if (user.rows.length === 0) {
-      // For security, don't reveal if email exists or not
       return res.json({
         message:
           "If an account exists with this email, you will receive a reset link.",
       });
     }
 
-    // Generate a reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-    // Store reset token in database
-    await sql`
-        UPDATE users 
-        SET reset_token = ${resetToken},
-            reset_token_expiry = ${resetTokenExpiry}
-        WHERE email = ${email}
-      `;
+    await pool.query(
+      `UPDATE users 
+       SET reset_token = $1,
+           reset_token_expiry = $2
+       WHERE email = $3`,
+      [resetToken, resetTokenExpiry, email]
+    );
 
-    // In a real app, you'd send an email here
     console.log(`Reset token for ${email}:`, resetToken);
 
     res.json({
       message:
         "If an account exists with this email, you will receive a reset link.",
-      // Remove this in production:
       debug: {
         resetToken,
         resetLink: `/reset-password?token=${resetToken}`,
@@ -447,18 +410,17 @@ app.post("/api/auth/forgot-password", async (req, res) => {
   }
 });
 
-// Reset password with token
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    // Find user with valid reset token
-    const user = await sql`
-        SELECT id 
-        FROM users 
-        WHERE reset_token = ${token}
-          AND reset_token_expiry > NOW()
-      `;
+    const user = await pool.query(
+      `SELECT id 
+       FROM users 
+       WHERE reset_token = $1
+         AND reset_token_expiry > NOW()`,
+      [token]
+    );
 
     if (user.rows.length === 0) {
       return res
@@ -466,7 +428,6 @@ app.post("/api/auth/reset-password", async (req, res) => {
         .json({ message: "Invalid or expired reset token" });
     }
 
-    // Validate new password
     const passwordValidation = validatePassword(newPassword);
     if (!passwordValidation.isValid) {
       return res.status(400).json({
@@ -475,18 +436,17 @@ app.post("/api/auth/reset-password", async (req, res) => {
       });
     }
 
-    // Hash new password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
-    // Update password and clear reset token
-    await sql`
-        UPDATE users 
-        SET password_hash = ${passwordHash},
-            reset_token = NULL,
-            reset_token_expiry = NULL
-        WHERE id = ${user.rows[0].id}
-      `;
+    await pool.query(
+      `UPDATE users 
+       SET password_hash = $1,
+           reset_token = NULL,
+           reset_token_expiry = NULL
+       WHERE id = $2`,
+      [passwordHash, user.rows[0].id]
+    );
 
     res.json({ message: "Password updated successfully" });
   } catch (error) {
@@ -495,13 +455,11 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 
-// Add this at the end of server.mjs
 const PORT = process.env.PORT || 3001;
 
-// Test database connection before starting server
 async function testDbConnection() {
   try {
-    const result = await sql`SELECT NOW()`;
+    const result = await pool.query("SELECT NOW()");
     console.log("Database connection successful:", result.rows[0]);
     return true;
   } catch (error) {
@@ -510,7 +468,6 @@ async function testDbConnection() {
   }
 }
 
-// Start server only after testing database
 async function startServer() {
   const dbConnected = await testDbConnection();
 
