@@ -10,6 +10,11 @@ import crypto from "crypto";
 // Load environment variables
 config();
 
+console.log("Database connection check:", {
+  hasPostgresUrl: !!process.env.PROD_POSTGRES_URL,
+  envType: process.env.VERCEL_ENV,
+});
+
 // Validate required environment variables
 const requiredEnvVars = ["POSTGRES_URL", "JWT_SECRET"];
 
@@ -50,7 +55,13 @@ app.get("/api/test-db", async (req, res) => {
 // Update the register endpoint in server.mjs
 app.post("/api/auth/register", async (req, res) => {
   try {
+    console.log("Registration attempt started");
     const { email, password, name, age, height, weight } = req.body;
+
+    console.log("Database connection check in register:", {
+      hasUrl: !!process.env.POSTGRES_URL,
+      email: email, // don't log password
+    });
 
     // Validate input
     if (!email || !password || !name) {
@@ -107,8 +118,15 @@ app.post("/api/auth/register", async (req, res) => {
       user: result.rows[0],
     });
   } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({ message: "Error creating user" });
+    console.error("Registration error details:", {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
+    res.status(500).json({
+      message: "Error creating user",
+      details: error.message,
+    });
   }
 });
 
