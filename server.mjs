@@ -12,13 +12,19 @@ config();
 
 // Create a database client
 const client = createClient({
-  connectionString:
-    process.env.POSTGRES_URL_NON_POOLING || process.env.PROD_POSTGRES_URL,
+  connectionString: process.env.PROD_DATABASE_URL_UNPOOLED, // for non-pooled connection
 });
 
-console.log("Database connection check:", {
-  hasPostgresUrl: !!process.env.PROD_POSTGRES_URL,
+// Add some debugging
+console.log("Database URL check:", {
+  hasUnpooledUrl: !!process.env.PROD_DATABASE_URL_UNPOOLED,
   envType: process.env.VERCEL_ENV,
+});
+
+console.log("Environment variables:", {
+  hasPostgresUrl: !!process.env.POSTGRES_URL,
+  hasPostgresNonPooling: !!process.env.POSTGRES_URL_NON_POOLING,
+  hasProdPostgresUrl: !!process.env.PROD_POSTGRES_URL,
 });
 
 // Validate required environment variables
