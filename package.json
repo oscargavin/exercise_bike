@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"node server.mjs\"",
     "start": "node server.mjs",
-    "build": "vite build",
+    "build": "vite build && cp server.mjs dist/",
+    "postbuild": "node setup-db.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "setup-db": "node setup-db.mjs"
