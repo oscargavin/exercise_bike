@@ -11,7 +11,7 @@ import crypto from "crypto";
 config();
 
 // Update the required env vars check
-const requiredEnvVars = ["PROD_DATABASE_URL_UNPOOLED", "PROD_JWT_SECRET"]; // Changed from POSTGRES_URL
+const requiredEnvVars = ["PROD_DATABASE_URL_UNPOOLED", "PROD_JWT_SECRET"];
 
 requiredEnvVars.forEach((varName) => {
   if (!process.env[varName]) {
@@ -19,20 +19,66 @@ requiredEnvVars.forEach((varName) => {
   }
 });
 
-console.log("Environment check:", {
-  DATABASE_URL: !!process.env.PROD_DATABASE_URL_UNPOOLED, // Updated to match our env var
-  JWT_SECRET: !!process.env.PROD_JWT_SECRET,
-});
+// Create a database client with improved connection handling
+const getClient = () => {
+  const client = createClient({
+    connectionString: process.env.PROD_DATABASE_URL_UNPOOLED,
+    keepAlive: true,
+    idleTimeoutMillis: 30000, // 30 seconds
+    max: 20, // max number of clients in the pool
+  });
 
-// And update the client creation accordingly
-const client = createClient({
-  connectionString: process.env.PROD_DATABASE_URL_UNPOOLED,
-});
+  // Add connection error handler
+  client.on("error", async (err) => {
+    console.error("Database connection error:", err);
+    try {
+      await client.end();
+      await client.connect();
+    } catch (reconnectError) {
+      console.error("Failed to reconnect:", reconnectError);
+    }
+  });
 
-console.log("Environment check:", {
-  POSTGRES_URL: !!process.env.POSTGRES_URL,
-  JWT_SECRET: !!process.env.PROD_JWT_SECRET,
-});
+  return client;
+};
+
+const client = getClient();
+
+// Helper function to execute database queries with retries
+const executeQuery = async (queryFn) => {
+  const maxRetries = 3;
+  let lastError;
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const result = await queryFn();
+      return result;
+    } catch (error) {
+      console.error(`Query attempt ${i + 1} failed:`, error);
+      lastError = error;
+
+      // If it's a connection error, wait before retrying
+      if (
+        error.code === "57P01" ||
+        error.code === "57P02" ||
+        error.code === "57P03"
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
+        try {
+          await client.connect();
+        } catch (connectError) {
+          console.error("Reconnection attempt failed:", connectError);
+        }
+        continue;
+      }
+
+      // For other errors, throw immediately
+      throw error;
+    }
+  }
+
+  throw lastError;
+};
 
 const app = express();
 
@@ -45,10 +91,10 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "API is working" });
 });
 
-// Database test route
+// Database test route with improved error handling
 app.get("/api/test-db", async (req, res) => {
   try {
-    const result = await client.query("SELECT NOW()");
+    const result = await executeQuery(() => client.query("SELECT NOW()"));
     res.json({ status: "Database connected", timestamp: result.rows[0] });
   } catch (error) {
     console.error("Database test error:", error);
@@ -56,16 +102,10 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
-// Register endpoint
+// Register endpoint with improved error handling
 app.post("/api/auth/register", async (req, res) => {
   try {
-    console.log("Registration attempt started");
     const { email, password, name, age, height, weight } = req.body;
-
-    console.log("Database connection check in register:", {
-      hasUrl: !!process.env.POSTGRES_URL,
-      email: email,
-    });
 
     if (!email || !password || !name) {
       return res.status(400).json({
@@ -82,9 +122,8 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     // Check if user exists
-    const existingUser = await client.query(
-      "SELECT id FROM users WHERE email = $1",
-      [email]
+    const existingUser = await executeQuery(() =>
+      client.query("SELECT id FROM users WHERE email = $1", [email])
     );
 
     if (existingUser.rows.length > 0) {
@@ -94,19 +133,21 @@ app.post("/api/auth/register", async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    const result = await client.query(
-      `INSERT INTO users (
-        email, password_hash, name, age, height, weight
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, email, name, age, height, weight, created_at`,
-      [
-        email,
-        passwordHash,
-        name,
-        parseInt(age),
-        parseFloat(height),
-        parseFloat(weight),
-      ]
+    const result = await executeQuery(() =>
+      client.query(
+        `INSERT INTO users (
+          email, password_hash, name, age, height, weight
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, email, name, age, height, weight, created_at`,
+        [
+          email,
+          passwordHash,
+          name,
+          parseInt(age),
+          parseFloat(height),
+          parseFloat(weight),
+        ]
+      )
     );
 
     res.status(201).json({
@@ -114,11 +155,7 @@ app.post("/api/auth/register", async (req, res) => {
       user: result.rows[0],
     });
   } catch (error) {
-    console.error("Registration error details:", {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-    });
+    console.error("Registration error details:", error);
     res.status(500).json({
       message: "Error creating user",
       details: error.message,
@@ -126,14 +163,14 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-// Login endpoint
+// Login endpoint with improved error handling
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const result = await client.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    const result = await executeQuery(() =>
+      client.query("SELECT * FROM users WHERE email = $1", [email])
+    );
 
     if (result.rows.length === 0) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -170,39 +207,54 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// Token verification middleware
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  console.log("Auth Header:", authHeader);
 
   if (!authHeader) {
-    console.log("No authorization header");
-    return res.status(401).json({ message: "No token provided" });
+    return res.status(401).json({
+      status: "error",
+      code: "token_missing",
+      message: "Authentication required",
+    });
   }
 
   const token = authHeader.split(" ")[1];
   if (!token) {
-    console.log("No token in auth header");
-    return res.status(401).json({ message: "No token provided" });
+    return res.status(401).json({
+      status: "error",
+      code: "token_missing",
+      message: "Authentication required",
+    });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.PROD_JWT_SECRET);
-    console.log("Token decoded successfully:", decoded);
     req.userId = decoded.userId;
     next();
   } catch (error) {
-    console.error("Token verification failed:", error);
-    return res.status(401).json({ message: "Invalid token" });
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        status: "error",
+        code: "token_expired",
+        message: "Session expired",
+      });
+    }
+    return res.status(401).json({
+      status: "error",
+      code: "token_invalid",
+      message: "Invalid authentication",
+    });
   }
 };
 
-// Get user profile
+// Get user profile with improved error handling
 app.get("/api/user/profile", verifyToken, async (req, res) => {
   try {
-    const result = await client.query(
-      "SELECT id, email, name, age, height, weight, profile_picture FROM users WHERE id = $1",
-      [req.userId]
+    const result = await executeQuery(() =>
+      client.query(
+        "SELECT id, email, name, age, height, weight, profile_picture FROM users WHERE id = $1",
+        [req.userId]
+      )
     );
 
     if (result.rows.length === 0) {
@@ -216,22 +268,24 @@ app.get("/api/user/profile", verifyToken, async (req, res) => {
   }
 });
 
-// Update user profile
+// Update user profile with improved error handling
 app.put("/api/user/profile", verifyToken, async (req, res) => {
   try {
     const { name, age, height, weight, profilePicture } = req.body;
 
-    const result = await client.query(
-      `UPDATE users
-       SET name = COALESCE($1, name),
-           age = COALESCE($2, age),
-           height = COALESCE($3, height),
-           weight = COALESCE($4, weight),
-           profile_picture = COALESCE($5, profile_picture),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6
-       RETURNING id, email, name, age, height, weight, profile_picture`,
-      [name, age, height, weight, profilePicture, req.userId]
+    const result = await executeQuery(() =>
+      client.query(
+        `UPDATE users
+         SET name = COALESCE($1, name),
+             age = COALESCE($2, age),
+             height = COALESCE($3, height),
+             weight = COALESCE($4, weight),
+             profile_picture = COALESCE($5, profile_picture),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $6
+         RETURNING id, email, name, age, height, weight, profile_picture`,
+        [name, age, height, weight, profilePicture, req.userId]
+      )
     );
 
     if (result.rows.length === 0) {
@@ -245,36 +299,30 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
   }
 });
 
-// Session routes
+// Session routes with improved error handling
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
-    console.log("Received session save request. Body:", req.body);
-    console.log("User ID from token:", req.userId);
-
     const { startTime, endTime, metricsData } = req.body;
 
     if (!startTime || !endTime || !metricsData) {
-      console.log("Missing required fields:", {
-        startTime,
-        endTime,
-        hasMetrics: !!metricsData,
-      });
       return res.status(400).json({
         message: "Missing required fields",
         received: { startTime, endTime, hasMetrics: !!metricsData },
       });
     }
 
-    const result = await client.query(
-      `INSERT INTO exercise_sessions (user_id, start_time, end_time, metrics_data)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, start_time, end_time, metrics_data`,
-      [
-        req.userId,
-        new Date(startTime),
-        new Date(endTime),
-        JSON.stringify(metricsData),
-      ]
+    const result = await executeQuery(() =>
+      client.query(
+        `INSERT INTO exercise_sessions (user_id, start_time, end_time, metrics_data)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, start_time, end_time, metrics_data`,
+        [
+          req.userId,
+          new Date(startTime),
+          new Date(endTime),
+          JSON.stringify(metricsData),
+        ]
+      )
     );
 
     res.status(201).json({
@@ -290,20 +338,22 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
   }
 });
 
-// Get sessions
+// Get sessions with improved error handling
 app.get("/api/sessions", verifyToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const result = await client.query(
-      `SELECT id, start_time, end_time, metrics_data
-       FROM exercise_sessions
-       WHERE user_id = $1
-       ORDER BY start_time DESC
-       LIMIT $2 OFFSET $3`,
-      [req.userId, limit, offset]
+    const result = await executeQuery(() =>
+      client.query(
+        `SELECT id, start_time, end_time, metrics_data
+         FROM exercise_sessions
+         WHERE user_id = $1
+         ORDER BY start_time DESC
+         LIMIT $2 OFFSET $3`,
+        [req.userId, limit, offset]
+      )
     );
 
     const formattedSessions = result.rows.map((session) => ({
@@ -327,14 +377,13 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
   }
 });
 
-// Password reset routes
+// Password reset routes with improved error handling
 app.post("/api/auth/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await client.query(
-      "SELECT id, email FROM users WHERE email = $1",
-      [email]
+    const user = await executeQuery(() =>
+      client.query("SELECT id, email FROM users WHERE email = $1", [email])
     );
 
     if (user.rows.length === 0) {
@@ -347,15 +396,15 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-    await client.query(
-      `UPDATE users 
-       SET reset_token = $1,
-           reset_token_expiry = $2
-       WHERE email = $3`,
-      [resetToken, resetTokenExpiry, email]
+    await executeQuery(() =>
+      client.query(
+        `UPDATE users 
+         SET reset_token = $1,
+             reset_token_expiry = $2
+         WHERE email = $3`,
+        [resetToken, resetTokenExpiry, email]
+      )
     );
-
-    console.log(`Reset token for ${email}:`, resetToken);
 
     res.json({
       message:
@@ -375,12 +424,14 @@ app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    const user = await client.query(
-      `SELECT id 
-       FROM users 
-       WHERE reset_token = $1
-         AND reset_token_expiry > NOW()`,
-      [token]
+    const user = await executeQuery(() =>
+      client.query(
+        `SELECT id 
+         FROM users 
+         WHERE reset_token = $1
+           AND reset_token_expiry > NOW()`,
+        [token]
+      )
     );
 
     if (user.rows.length === 0) {
@@ -400,13 +451,15 @@ app.post("/api/auth/reset-password", async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
-    await client.query(
-      `UPDATE users 
-       SET password_hash = $1,
-           reset_token = NULL,
-           reset_token_expiry = NULL
-       WHERE id = $2`,
-      [passwordHash, user.rows[0].id]
+    await executeQuery(() =>
+      client.query(
+        `UPDATE users 
+         SET password_hash = $1,
+             reset_token = NULL,
+             reset_token_expiry = NULL
+         WHERE id = $2`,
+        [passwordHash, user.rows[0].id]
+      )
     );
 
     res.json({ message: "Password updated successfully" });
@@ -433,8 +486,8 @@ const PORT = process.env.PORT || 3001;
 
 async function testDbConnection() {
   try {
-    await client.connect(); // Important: connect before using
-    const result = await client.query("SELECT NOW()");
+    await client.connect();
+    const result = await executeQuery(() => client.query("SELECT NOW()"));
     console.log("Database connection successful:", result.rows[0]);
     return true;
   } catch (error) {
