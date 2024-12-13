@@ -4,6 +4,7 @@ import { processBluetoothData } from '../utils/dataProcessing';
 import Navbar from '../components/Navbar';
 import MetricCard from '../components/MetricCard';
 import SessionsList from '../components/SessionsList';
+import StatsTracking from '@/components/StatsTracking';
 import { Loader2 } from 'lucide-react';
 
 function Dashboard() {
