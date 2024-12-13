@@ -11,15 +11,18 @@ import ResetPassword from './pages/ResetPassword';
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
+    console.log("ProtectedRoute: Loading...");
     return <div>Loading...</div>;
   }
-  
+
   if (!user) {
+    console.log("ProtectedRoute: User not authenticated, redirecting to /login");
     return <Navigate to="/login" />;
   }
-  
+
+  console.log("ProtectedRoute: User authenticated, rendering child components");
   return children;
 };
 
