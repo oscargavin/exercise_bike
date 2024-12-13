@@ -66,7 +66,10 @@ function Dashboard() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {previousSessions.length > 0 && (
             <div className="mb-8">
-                <StatsTracking sessions={previousSessions} />
+                <StatsTracking 
+                    sessions={previousSessions}
+                    userName={user?.name}  // Add this prop
+                />
             </div>
         )}
         {/* Previous Sessions */}
