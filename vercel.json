@@ -14,8 +14,14 @@
       }
     ],
     "routes": [
-        { "src": "/[^.]+",
-          "dest": "/",
-          "status": 200 }
-    ] 
+      {
+        "src": "/api/(.*)",
+        "dest": "/server.mjs"
+      },
+      { 
+        "src": "/[^.]+", 
+        "dest": "/", 
+        "status": 200 
+      }
+    ]
   }
