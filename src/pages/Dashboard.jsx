@@ -1,6 +1,7 @@
 import { useBluetoothDevice } from '../hooks/useBluetoothDevice';
 import { useSessionManager } from '../hooks/useSessionManager';
 import { processBluetoothData } from '../utils/dataProcessing';
+import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import MetricCard from '../components/MetricCard';
 import SessionsList from '../components/SessionsList';
