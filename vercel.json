@@ -19,9 +19,6 @@
         "dest": "/server.mjs"
       },
       {
-        "handle": "filesystem"
-      },
-      {
         "src": "/(.*)",
         "dest": "/dist/index.html"
       }
