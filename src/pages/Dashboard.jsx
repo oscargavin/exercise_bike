@@ -64,6 +64,11 @@ function Dashboard() {
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {previousSessions.length > 0 && (
+            <div className="mb-8">
+                <StatsTracking sessions={previousSessions} />
+            </div>
+        )}
         {/* Previous Sessions */}
         <div className="mb-8 bg-gray-800/50 border-gray-700 rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
@@ -89,13 +94,6 @@ function Dashboard() {
             />
           )}
         </div>
-
-        {previousSessions.length > 0 && (
-            <div className="mb-8">
-                <StatsTracking sessions={previousSessions} />
-            </div>
-        )}
-
         {/* Metrics Grid */}
         {(isSessionActive || selectedSession) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
