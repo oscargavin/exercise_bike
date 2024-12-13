@@ -70,7 +70,7 @@ function Dashboard() {
             <div className="mb-8">
                 <StatsTracking 
                     sessions={previousSessions}
-                    userName={user?.name}  // Add this prop
+                    userName={user?.name}
                 />
             </div>
         )}

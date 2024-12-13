@@ -79,7 +79,7 @@ const StatsTracking = ({ sessions, userName }) => {
           <Sparkles className="w-8 h-8 text-blue-400 mt-1" />
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">
-              Welcome back{userName ? `, ${userName}` : ''}! 
+              Welcome back{userName ? ` ${userName.split(' ')[0]}` : ''}! 
             </h2>
             <p className="text-gray-400 text-lg">
               {lastSessionDate ? (
