@@ -89,6 +89,12 @@ function Dashboard() {
           )}
         </div>
 
+        {previousSessions.length > 0 && (
+            <div className="mb-8">
+                <StatsTracking sessions={previousSessions} />
+            </div>
+        )}
+
         {/* Metrics Grid */}
         {(isSessionActive || selectedSession) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
