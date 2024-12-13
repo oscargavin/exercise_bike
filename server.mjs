@@ -211,20 +211,16 @@ const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({
-      status: "error",
-      code: "token_missing",
-      message: "Authentication required",
-    });
+    return res
+      .status(401)
+      .json({ code: "token_missing", message: "Authentication required" }); // Specific error code
   }
 
   const token = authHeader.split(" ")[1];
   if (!token) {
-    return res.status(401).json({
-      status: "error",
-      code: "token_missing",
-      message: "Authentication required",
-    });
+    return res
+      .status(401)
+      .json({ code: "token_missing", message: "Authentication required" }); // Specific error code
   }
 
   try {
@@ -233,17 +229,13 @@ const verifyToken = (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        status: "error",
-        code: "token_expired",
-        message: "Session expired",
-      });
+      return res
+        .status(401)
+        .json({ code: "token_expired", message: "Session expired" }); // Specific error code
     }
-    return res.status(401).json({
-      status: "error",
-      code: "token_invalid",
-      message: "Invalid authentication",
-    });
+    return res
+      .status(401)
+      .json({ code: "token_invalid", message: "Invalid authentication" }); // Specific error code
   }
 };
 

@@ -4,21 +4,44 @@ import { useNavigate } from 'react-router-dom';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check if user is logged in
-    // Try sessionStorage first, then localStorage
-    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-    const savedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
-  }, []);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+  
+    useEffect(() => {
+      const checkAuthStatus = async () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const response = await fetch('/api/protected-test', { // Make a request to a protected endpoint
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+  
+            if (!response.ok) {
+              const errorData = await response.json()
+              if (errorData.code === "token_expired" || errorData.code === "token_invalid") {
+                // Token is invalid or expired, log the user out
+                logout();
+                return;
+              }
+              throw new Error("Token check failed")
+            }
+  
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+              setUser(JSON.parse(savedUser));
+            }
+          } catch (error) {
+            console.error("Authentication check error:", error);
+            logout(); // Log out on any error
+          }
+        }
+        setLoading(false);
+      };
+      checkAuthStatus();
+    }, []);
 
   const login = (userData, token) => {
     // Include token in the user data
