@@ -14,13 +14,8 @@
       }
     ],
     "routes": [
-      {
-        "src": "/api/(.*)",
-        "dest": "/server.mjs"
-      },
-      {
-        "src": "/(.*)",
-        "dest": "/dist/index.html"
-      }
-    ]
+        { "src": "/[^.]+",
+          "dest": "/",
+          "status": 200 }
+    ] 
   }

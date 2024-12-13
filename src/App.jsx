@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <Router>
+    <Router base="">
       <AuthProvider>
         <Routes>
           <Route path="/forgot-password" element={<ForgotPassword />} />
