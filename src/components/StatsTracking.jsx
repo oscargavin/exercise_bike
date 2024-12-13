@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Sparkles, TrendingUp } from 'lucide-react';
+import { Sparkles, TrendingUp, X } from 'lucide-react';
 import _ from 'lodash';
 
 const StatsTracking = ({ sessions, userName }) => {
+  const [showWelcome, setShowWelcome] = useState(true);
+
   // Get session dates for welcome message
   const lastSessionDate = useMemo(() => {
     if (!sessions.length) return null;
@@ -74,43 +76,53 @@ const StatsTracking = ({ sessions, userName }) => {
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20">
-        <div className="flex items-start space-x-3">
-          <Sparkles className="w-8 h-8 text-blue-400 mt-1" />
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2">
-              Welcome back{userName ? ` ${userName.split(' ')[0]}` : ''}! 
-            </h2>
-            <p className="text-gray-400 text-lg">
-              {lastSessionDate ? (
-                <>Your last session was on {lastSessionDate}. Here's how you're progressing:</>
-              ) : (
-                <>Ready to track your fitness journey? Let's get started!</>
-              )}
-            </p>
-            
-            {progressIndicators && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                {Object.entries(progressIndicators).map(([metric, change]) => (
-                  <div key={metric} className="bg-gray-800/40 rounded-lg p-4">
-                    <div className="text-sm text-gray-400 capitalize mb-1">{metric}</div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-lg font-semibold ${
-                        parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {change > 0 ? '+' : ''}{change}%
-                      </span>
-                      <TrendingUp className={`w-4 h-4 ${
-                        parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
-                      }`} />
+      {showWelcome && (
+        <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20 relative">
+          <button
+            onClick={() => setShowWelcome(false)}
+            className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-gray-800/50 transition-colors text-gray-400 hover:text-gray-200"
+            aria-label="Dismiss welcome message"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="flex items-start space-x-3">
+            <Sparkles className="w-8 h-8 text-blue-400 mt-1" />
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Welcome back{userName ? ` ${userName.split(' ')[0]}` : ''}! 
+              </h2>
+              <p className="text-gray-400 text-lg">
+                {lastSessionDate ? (
+                  <>Your last session was on {lastSessionDate}. Here's how you're progressing:</>
+                ) : (
+                  <>Ready to track your fitness journey? Let's get started!</>
+                )}
+              </p>
+              
+              {progressIndicators && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                  {Object.entries(progressIndicators).map(([metric, change]) => (
+                    <div key={metric} className="bg-gray-800/40 rounded-lg p-4">
+                      <div className="text-sm text-gray-400 capitalize mb-1">{metric}</div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-lg font-semibold ${
+                          parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {change > 0 ? '+' : ''}{change}%
+                        </span>
+                        <TrendingUp className={`w-4 h-4 ${
+                          parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
+                        }`} />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Trend Analysis Chart */}
       <Card className="bg-gray-800/50 border-gray-700">
