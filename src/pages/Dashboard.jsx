@@ -22,6 +22,7 @@ function Dashboard() {
     endSession,
   } = useSessionManager();
 
+  const { user } = useAuth();  // Add this line
   const { isConnected, deviceInfo, connect, disconnect } = useBluetoothDevice((data) => {
     const processedData = processBluetoothData(data);
     if (processedData) {
