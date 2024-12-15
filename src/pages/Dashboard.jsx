@@ -7,6 +7,9 @@ import MetricCard from '../components/MetricCard';
 import SessionsList from '../components/SessionsList';
 import StatsTracking from '@/components/StatsTracking';
 import { Loader2 } from 'lucide-react';
+import { useMultipleBluetoothDevices } from '../hooks/useMultipleBluetoothDevices';
+import { DEVICE_TYPES } from '../constants/bluetoothConstants';
+import { processBluetoothData } from '../utils/dataProcessing';
 
 function Dashboard() {
   const {
