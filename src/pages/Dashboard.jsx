@@ -4,6 +4,8 @@ import { processBluetoothData } from '../utils/dataProcessing';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import MetricCard from '../components/MetricCard';
+import MetricCardSkeleton from './MetricCardSkeleton';
+import SessionsListSkeleton from './SessionsListSkeleton';
 import SessionsList from '../components/SessionsList';
 import StatsTracking from '@/components/StatsTracking';
 import { Loader2 } from 'lucide-react';
@@ -96,7 +98,7 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Metrics Grid with smooth transition */}
+        {/* Metrics Grid with loading state */}
         <div 
           className={`transform transition-all duration-300 ease-in-out origin-top ${
             isSessionActive || selectedSession 
@@ -104,51 +106,56 @@ function Dashboard() {
               : 'opacity-0 scale-95 -translate-y-4 h-0 overflow-hidden mb-0'
           }`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <MetricCard
-              title="Speed"
-              emoji="🏃"
-              data={selectedSession ? getSessionData(selectedSession).speed : timeSeriesData.speed}
-              color="#3b82f6"
-              unit="km/h"
-              isLive={!selectedSession}
-            />
-            <MetricCard
-              title="Cadence"
-              emoji="⚙️"
-              data={selectedSession ? getSessionData(selectedSession).cadence : timeSeriesData.cadence}
-              color="#10b981"
-              unit="rpm"
-              isLive={!selectedSession}
-            />
-            <MetricCard
-              title="Resistance"
-              emoji="💪"
-              data={selectedSession ? getSessionData(selectedSession).resistance : timeSeriesData.resistance}
-              color="#ef4444"
-              unit="%"
-              isLive={!selectedSession}
-              isResistance={true}
-            />
-            <MetricCard
-              title="Heart Rate"
-              emoji="❤️"
-              data={selectedSession ? getSessionData(selectedSession).heartRate : timeSeriesData.heartRate}
-              color="#f97316"
-              unit="bpm"
-              isLive={!selectedSession}
-              isHeartRate={true}
-            />
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <MetricCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <MetricCard
+                title="Speed"
+                emoji="🏃"
+                data={selectedSession ? getSessionData(selectedSession).speed : timeSeriesData.speed}
+                color="#3b82f6"
+                unit="km/h"
+                isLive={!selectedSession}
+              />
+              <MetricCard
+                title="Cadence"
+                emoji="⚙️"
+                data={selectedSession ? getSessionData(selectedSession).cadence : timeSeriesData.cadence}
+                color="#10b981"
+                unit="rpm"
+                isLive={!selectedSession}
+              />
+              <MetricCard
+                title="Resistance"
+                emoji="💪"
+                data={selectedSession ? getSessionData(selectedSession).resistance : timeSeriesData.resistance}
+                color="#ef4444"
+                unit="%"
+                isLive={!selectedSession}
+                isResistance={true}
+              />
+              <MetricCard
+                title="Heart Rate"
+                emoji="❤️"
+                data={selectedSession ? getSessionData(selectedSession).heartRate : timeSeriesData.heartRate}
+                color="#f97316"
+                unit="bpm"
+                isLive={!selectedSession}
+                isHeartRate={true}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Previous Sessions */}
+        {/* Previous Sessions with loading state */}
         <div className="bg-gray-800/50 border-gray-700 rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-white">Previous Sessions</h2>
-            {isLoading && (
-              <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-            )}
           </div>
 
           {error && (
@@ -157,7 +164,9 @@ function Dashboard() {
             </div>
           )}
 
-          {previousSessions.length === 0 && !isLoading ? (
+          {isLoading ? (
+            <SessionsListSkeleton />
+          ) : previousSessions.length === 0 ? (
             <p className="text-gray-400">No previous sessions found</p>
           ) : (
             <SessionsList
@@ -171,5 +180,6 @@ function Dashboard() {
     </div>
   );
 }
+
 
 export default Dashboard;
