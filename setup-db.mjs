@@ -57,155 +57,15 @@ async function setupDatabase() {
       await client.query(
         `CREATE INDEX idx_exercise_sessions_start_time ON exercise_sessions(start_time DESC)`
       );
-      await client.query(
-        `CREATE INDEX idx_users_reset_token ON users(reset_token)`
-      );
 
-      console.log("Initial database setup completed successfully");
+      console.log("Database setup completed successfully");
     } else {
-      console.log("Tables already exist, skipping initial creation");
+      console.log("Tables already exist, no changes needed");
     }
 
-    // Heart rate updates - these will run regardless of whether tables existed
-    console.log("Starting heart rate tracking updates...");
-
-    // Check if heart rate columns exist
-    const heartRateColumnsExist = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_name = 'exercise_sessions' AND column_name = 'avg_heart_rate'
-      );
-    `);
-
-    if (!heartRateColumnsExist.rows[0].exists) {
-      console.log("Adding heart rate tracking capabilities...");
-
-      // Start transaction for heart rate updates
-      await client.query("BEGIN");
-
-      try {
-        // Backup existing metrics_data
-        await client.query(`
-          ALTER TABLE exercise_sessions 
-          ADD COLUMN IF NOT EXISTS metrics_data_backup JSONB;
-        `);
-
-        await client.query(`
-          UPDATE exercise_sessions 
-          SET metrics_data_backup = metrics_data 
-          WHERE metrics_data_backup IS NULL;
-        `);
-
-        // Add heart rate array to existing metrics_data
-        await client.query(`
-          UPDATE exercise_sessions 
-          SET metrics_data = jsonb_set(
-            COALESCE(metrics_data, '{}'::jsonb),
-            '{heartRate}',
-            '[]'::jsonb,
-            true
-          )
-          WHERE metrics_data IS NOT NULL;
-        `);
-
-        // Add heart rate statistics columns
-        await client.query(`
-          ALTER TABLE exercise_sessions
-          ADD COLUMN avg_heart_rate DECIMAL,
-          ADD COLUMN max_heart_rate INTEGER,
-          ADD COLUMN min_heart_rate INTEGER,
-          ADD COLUMN heart_rate_zones JSONB;
-        `);
-
-        // Create index for heart rate statistics
-        await client.query(`
-          CREATE INDEX idx_sessions_heart_rate_stats 
-          ON exercise_sessions (avg_heart_rate, max_heart_rate);
-        `);
-
-        // Commit transaction
-        await client.query("COMMIT");
-        console.log("Heart rate tracking updates completed successfully");
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      }
-    } else {
-      console.log("Heart rate columns already exist, skipping updates");
-    }
-
-    // Resistance tracking updates
-    console.log("Starting resistance tracking updates...");
-
-    // Check if resistance columns exist
-    const resistanceColumnsExist = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_name = 'exercise_sessions' AND column_name = 'avg_resistance'
-      );
-    `);
-
-    if (!resistanceColumnsExist.rows[0].exists) {
-      console.log("Adding resistance tracking capabilities...");
-
-      // Start transaction for resistance updates
-      await client.query("BEGIN");
-
-      try {
-        // Backup existing metrics_data if not already backed up
-        await client.query(`
-          ALTER TABLE exercise_sessions 
-          ADD COLUMN IF NOT EXISTS metrics_data_backup JSONB;
-        `);
-
-        await client.query(`
-          UPDATE exercise_sessions 
-          SET metrics_data_backup = metrics_data 
-          WHERE metrics_data_backup IS NULL;
-        `);
-
-        // Add resistance array to existing metrics_data
-        await client.query(`
-          UPDATE exercise_sessions 
-          SET metrics_data = jsonb_set(
-            COALESCE(metrics_data, '{}'::jsonb),
-            '{resistance}',
-            '[]'::jsonb,
-            true
-          )
-          WHERE metrics_data IS NOT NULL;
-        `);
-
-        // Add resistance statistics columns
-        await client.query(`
-          ALTER TABLE exercise_sessions
-          ADD COLUMN avg_resistance DECIMAL,
-          ADD COLUMN max_resistance INTEGER,
-          ADD COLUMN min_resistance INTEGER;
-        `);
-
-        // Create index for resistance statistics
-        await client.query(`
-          CREATE INDEX idx_sessions_resistance_stats 
-          ON exercise_sessions (avg_resistance, max_resistance);
-        `);
-
-        // Commit transaction
-        await client.query("COMMIT");
-        console.log("Resistance tracking updates completed successfully");
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      }
-    } else {
-      console.log("Resistance columns already exist, skipping updates");
-    }
-
-    console.log("All database updates completed successfully");
     process.exit(0);
   } catch (error) {
     console.error("Error setting up database:", error);
-    console.error("Error details:", error.message);
     process.exit(1);
   } finally {
     await client.end();

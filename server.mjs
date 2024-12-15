@@ -291,95 +291,50 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
   }
 });
 
-// Session routes with improved error handling
+// Session routes
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
-    const { startTime, endTime, metricsData, stats } = req.body;
+    const { startTime, endTime, metricsData } = req.body;
 
-    // Log the incoming request for debugging
-    console.log("Received session data:", {
-      startTime,
-      endTime,
-      hasMetricsData: !!metricsData,
-      stats,
-    });
-
-    // Validate required fields
     if (!startTime || !endTime || !metricsData) {
-      console.log("Missing required fields:", {
-        startTime,
-        endTime,
-        hasMetricsData: !!metricsData,
-      });
       return res.status(400).json({
         message: "Missing required fields",
-        received: { startTime, endTime, hasMetricsData: !!metricsData },
       });
     }
 
-    // Insert session with both heart rate and resistance data
     const insertQuery = `
       INSERT INTO exercise_sessions (
         user_id,
         start_time,
         end_time,
-        metrics_data,
-        avg_heart_rate,
-        max_heart_rate,
-        min_heart_rate,
-        avg_resistance,
-        max_resistance,
-        min_resistance
+        metrics_data
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id, start_time, end_time, metrics_data, 
-        avg_heart_rate, max_heart_rate, min_heart_rate,
-        avg_resistance, max_resistance, min_resistance
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, start_time, end_time, metrics_data
     `;
 
-    const values = [
-      req.userId,
-      new Date(startTime),
-      new Date(endTime),
-      metricsData,
-      stats?.avgHeartRate || null,
-      stats?.maxHeartRate || null,
-      stats?.minHeartRate || null,
-      stats?.avgResistance || null,
-      stats?.maxResistance || null,
-      stats?.minResistance || null,
-    ];
-
-    // Log the query and values for debugging
-    console.log("Executing query with values:", {
-      query: insertQuery,
-      values: values.map((v) => (v instanceof Date ? v.toISOString() : v)),
-    });
-
-    const result = await executeQuery(() => client.query(insertQuery, values));
-
-    console.log("Session saved successfully:", result.rows[0]);
+    const result = await executeQuery(() =>
+      client.query(insertQuery, [
+        req.userId,
+        new Date(startTime),
+        new Date(endTime),
+        metricsData,
+      ])
+    );
 
     res.status(201).json({
       message: "Session saved successfully",
       session: result.rows[0],
     });
   } catch (error) {
-    console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-    });
-
+    console.error("Error saving session:", error);
     res.status(500).json({
       message: "Error saving session",
       error: error.message,
-      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 });
 
-// Get sessions with improved error handling
 app.get("/api/sessions", verifyToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -388,42 +343,24 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
 
     const result = await executeQuery(() =>
       client.query(
-        `SELECT 
-          id, 
-          start_time, 
-          end_time, 
-          metrics_data,
-          avg_heart_rate,
-          max_heart_rate,
-          min_heart_rate,
-          avg_resistance,
-          max_resistance,
-          min_resistance
-        FROM exercise_sessions
-        WHERE user_id = $1
-        ORDER BY start_time DESC
-        LIMIT $2 OFFSET $3`,
+        `SELECT id, start_time, end_time, metrics_data
+         FROM exercise_sessions
+         WHERE user_id = $1
+         ORDER BY start_time DESC
+         LIMIT $2 OFFSET $3`,
         [req.userId, limit, offset]
       )
     );
 
-    const formattedSessions = result.rows.map((session) => ({
+    const sessions = result.rows.map((session) => ({
       id: session.id,
       startTime: session.start_time,
       endTime: session.end_time,
       data: session.metrics_data,
-      stats: {
-        avgHeartRate: session.avg_heart_rate,
-        maxHeartRate: session.max_heart_rate,
-        minHeartRate: session.min_heart_rate,
-        avgResistance: session.avg_resistance,
-        maxResistance: session.max_resistance,
-        minResistance: session.min_resistance,
-      },
     }));
 
     res.json({
-      sessions: formattedSessions,
+      sessions,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(result.rows.length / limit),

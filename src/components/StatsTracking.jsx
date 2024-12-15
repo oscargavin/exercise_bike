@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Sparkles, TrendingUp, ChevronRight, LightbulbIcon, X } from 'lucide-react';
-import _ from 'lodash';
+import { calculateSessionStats } from '@/utils/stats';
 
 const StatsTracking = ({ sessions, userName }) => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showInsights, setShowInsights] = useState(true);
 
-  // Get session dates for welcome message
   const lastSessionDate = useMemo(() => {
     if (!sessions.length) return null;
-    const date = new Date(sessions[sessions.length - 1].startTime || sessions[sessions.length - 1].start_time);
+    const date = new Date(sessions[0].startTime);
     return date.toLocaleDateString('en-US', { weekday: 'long' });
   }, [sessions]);
 
@@ -20,19 +19,14 @@ const StatsTracking = ({ sessions, userName }) => {
     if (!sessions.length) return [];
 
     return sessions.map(session => {
-      const data = session.data || session.metrics_data || {};
-      const avgSpeed = data.speed?.reduce((sum, point) => sum + point.value, 0) / data.speed?.length || 0;
-      const avgPower = data.power?.reduce((sum, point) => sum + point.value, 0) / data.power?.length || 0;
-      const avgCadence = data.cadence?.reduce((sum, point) => sum + point.value, 0) / data.cadence?.length || 0;
-      const avgHeartRate = session.stats?.avgHeartRate || 
-        (data.heartRate?.reduce((sum, point) => sum + point.value, 0) / data.heartRate?.length) || 0;
-
+      const stats = calculateSessionStats(session.data);
       return {
-        date: new Date(session.startTime || session.start_time).toLocaleDateString(),
-        speed: avgSpeed,
-        power: avgPower,
-        cadence: avgCadence,
-        heartRate: avgHeartRate
+        date: new Date(session.startTime).toLocaleDateString(),
+        speed: stats.avgSpeed,
+        power: stats.avgPower,
+        cadence: stats.avgCadence,
+        heartRate: stats.avgHeartRate,
+        resistance: stats.avgResistance
       };
     }).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [sessions]);
@@ -46,17 +40,15 @@ const StatsTracking = ({ sessions, userName }) => {
 
     metrics.forEach(metric => {
       const allValues = sessions.map(session => {
-        const data = session.data || session.metrics_data || {};
-        if (metric === 'heartRate') {
-          return session.stats?.avgHeartRate || 
-            (data[metric]?.reduce((sum, point) => sum + point.value, 0) / data[metric]?.length) || 0;
-        }
-        return data[metric]?.reduce((sum, point) => sum + point.value, 0) / data[metric]?.length || 0;
+        const stats = calculateSessionStats(session.data);
+        return stats[`avg${metric.charAt(0).toUpperCase() + metric.slice(1)}`];
       });
 
-      const latestValue = allValues[allValues.length - 1];
+      const currentStats = calculateSessionStats(sessions[0].data);
+      const currentValue = currentStats[`avg${metric.charAt(0).toUpperCase() + metric.slice(1)}`];
+      
       const sortedValues = [...allValues].sort((a, b) => a - b);
-      const rank = sortedValues.indexOf(latestValue);
+      const rank = sortedValues.indexOf(currentValue);
       rankings[metric] = ((rank / (sortedValues.length - 1)) * 100).toFixed(1);
     });
 
@@ -67,16 +59,21 @@ const StatsTracking = ({ sessions, userName }) => {
   const progressIndicators = useMemo(() => {
     if (sessions.length < 2) return null;
     
-    const latestSession = trendData[trendData.length - 1];
-    const previousSession = trendData[trendData.length - 2];
+    const latestStats = calculateSessionStats(sessions[0].data);
+    const previousStats = calculateSessionStats(sessions[1].data);
+    
+    const calculateChange = (current, previous) => {
+      if (!previous) return 0;
+      return ((current - previous) / previous * 100).toFixed(1);
+    };
     
     return {
-      speed: ((latestSession.speed - previousSession.speed) / previousSession.speed * 100).toFixed(1),
-      power: ((latestSession.power - previousSession.power) / previousSession.power * 100).toFixed(1),
-      cadence: ((latestSession.cadence - previousSession.cadence) / previousSession.cadence * 100).toFixed(1),
-      heartRate: ((latestSession.heartRate - previousSession.heartRate) / previousSession.heartRate * 100).toFixed(1)
+      speed: calculateChange(latestStats.avgSpeed, previousStats.avgSpeed),
+      power: calculateChange(latestStats.avgPower, previousStats.avgPower),
+      cadence: calculateChange(latestStats.avgCadence, previousStats.avgCadence),
+      heartRate: calculateChange(latestStats.avgHeartRate, previousStats.avgHeartRate)
     };
-  }, [trendData]);
+  }, [sessions]);
 
   return (
     <div>
@@ -107,12 +104,8 @@ const StatsTracking = ({ sessions, userName }) => {
         {showWelcome && (
           <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20 relative">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowWelcome(false);
-              }}
+              onClick={() => setShowWelcome(false)}
               className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-gray-800/50 transition-colors text-gray-400 hover:text-gray-200"
-              aria-label="Dismiss welcome message"
             >
               <X className="w-4 h-4" />
             </button>
@@ -169,7 +162,7 @@ const StatsTracking = ({ sessions, userName }) => {
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 12, fill: '#9CA3AF' }}
