@@ -292,57 +292,81 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
 });
 
 // Session routes with improved error handling
-// Replace the existing /api/sessions POST endpoint with this:
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
     const { startTime, endTime, metricsData, stats } = req.body;
 
+    // Log the incoming request for debugging
+    console.log("Received session data:", {
+      startTime,
+      endTime,
+      hasMetricsData: !!metricsData,
+      stats,
+    });
+
     // Validate required fields
     if (!startTime || !endTime || !metricsData) {
+      console.log("Missing required fields:", {
+        startTime,
+        endTime,
+        hasMetricsData: !!metricsData,
+      });
       return res.status(400).json({
         message: "Missing required fields",
-        received: { startTime, endTime, hasMetrics: !!metricsData },
+        received: { startTime, endTime, hasMetricsData: !!metricsData },
       });
     }
 
     // Insert session with heart rate data
-    const result = await executeQuery(() =>
-      client.query(
-        `INSERT INTO exercise_sessions (
-          user_id,
-          start_time,
-          end_time,
-          metrics_data,
-          avg_heart_rate,
-          max_heart_rate,
-          min_heart_rate,
-          heart_rate_zones
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, start_time, end_time, metrics_data, avg_heart_rate, max_heart_rate, min_heart_rate`,
-        [
-          req.userId,
-          new Date(startTime),
-          new Date(endTime),
-          JSON.stringify(metricsData),
-          stats?.avgHeartRate || null,
-          stats?.maxHeartRate || null,
-          stats?.minHeartRate || null,
-          JSON.stringify(stats?.heartRateZones || {}),
-        ]
+    const insertQuery = `
+      INSERT INTO exercise_sessions (
+        user_id,
+        start_time,
+        end_time,
+        metrics_data,
+        avg_heart_rate,
+        max_heart_rate,
+        min_heart_rate
       )
-    );
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, start_time, end_time, metrics_data, avg_heart_rate, max_heart_rate, min_heart_rate
+    `;
+
+    const values = [
+      req.userId,
+      new Date(startTime),
+      new Date(endTime),
+      metricsData, // PostgreSQL will automatically stringify the JSON
+      stats?.avgHeartRate || null,
+      stats?.maxHeartRate || null,
+      stats?.minHeartRate || null,
+    ];
+
+    // Log the query and values for debugging
+    console.log("Executing query with values:", {
+      query: insertQuery,
+      values: values.map((v) => (v instanceof Date ? v.toISOString() : v)),
+    });
+
+    const result = await executeQuery(() => client.query(insertQuery, values));
+
+    console.log("Session saved successfully:", result.rows[0]);
 
     res.status(201).json({
       message: "Session saved successfully",
       session: result.rows[0],
     });
   } catch (error) {
-    console.error("Error saving session:", error);
-    console.error("Request body:", req.body); // Add this for debugging
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
+
     res.status(500).json({
       message: "Error saving session",
       error: error.message,
+      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 });
