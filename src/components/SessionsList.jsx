@@ -1,13 +1,27 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { calculateSessionStats, formatTimeAgo, formatDuration } from '@/utils/stats';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+const SESSIONS_PER_PAGE = 5;
 
 const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  
   const safeFixed = (value) => {
     if (typeof value !== 'number' || isNaN(value)) return '0.0';
     return value.toFixed(1);
   };
 
-  // Calculate overall statistics
+  // Calculate total pages
+  const totalPages = Math.ceil(sessions.length / SESSIONS_PER_PAGE);
+
+  // Get current page's sessions
+  const currentSessions = useMemo(() => {
+    const startIndex = (currentPage - 1) * SESSIONS_PER_PAGE;
+    return sessions.slice(startIndex, startIndex + SESSIONS_PER_PAGE);
+  }, [sessions, currentPage]);
+
+  // Calculate overall statistics based on all sessions
   const overallStats = useMemo(() => {
     if (!sessions.length) return {};
     
@@ -59,9 +73,42 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
         </div>
       </div>
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end space-x-4">
+          <div className="text-sm text-gray-400">
+            Page {currentPage} of {totalPages}
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`p-1 rounded-lg transition-colors ${
+                currentPage === 1
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className={`p-1 rounded-lg transition-colors ${
+                currentPage === totalPages
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Session List */}
       <div className="space-y-4">
-        {sessions.map((session) => {
+        {currentSessions.map((session) => {
           const isSelected = selectedSession?.id === session.id;
           const stats = calculateSessionStats(session.data);
           const timeAgo = formatTimeAgo(session.startTime);
