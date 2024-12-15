@@ -1,3 +1,4 @@
+// src/hooks/useSessionManager.js
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -11,30 +12,36 @@ export const useSessionManager = () => {
   const [error, setError] = useState(null);
   const sessionActiveRef = useRef(false);
 
-  const [timeSeriesData, setTimeSeriesData] = useState({
+  // Ensure all arrays are initialized
+  const [timeSeriesData, setTimeSeriesData] = useState(() => ({
     speed: [],
     cadence: [],
     power: [],
-    calories: [],
-  });
+    heartRate: [],
+  }));
 
   const updateMetric = useCallback((metric, value) => {
     if (!sessionActiveRef.current) return;
-    setTimeSeriesData((prev) => ({
-      ...prev,
-      [metric]: [
-        ...prev[metric],
-        {
-          time: new Date().toLocaleTimeString(),
-          value,
-        },
-      ],
-    }));
+
+    setTimeSeriesData((prev) => {
+      // Ensure the metric exists in the previous state
+      const prevMetricData = prev[metric] || [];
+
+      return {
+        ...prev,
+        [metric]: [
+          ...prevMetricData,
+          {
+            time: new Date().toLocaleTimeString(),
+            value: Number(value) || 0,
+          },
+        ].slice(-100), // Keep only last 100 data points for performance
+      };
+    });
   }, []);
 
   const startNewSession = () => {
     console.log("Starting new session");
-    // Clear selected session when starting a new one
     setSelectedSession(null);
 
     const newSession = {
@@ -44,15 +51,16 @@ export const useSessionManager = () => {
         speed: [],
         cadence: [],
         power: [],
-        calories: [],
+        heartRate: [],
       },
     };
 
+    // Reset all metrics to empty arrays
     setTimeSeriesData({
       speed: [],
       cadence: [],
       power: [],
-      calories: [],
+      heartRate: [],
     });
 
     setIsSessionActive(true);
@@ -61,69 +69,82 @@ export const useSessionManager = () => {
   };
 
   const endSession = async () => {
-    if (currentSession) {
-      console.log("Current session data at end:", {
-        currentSession,
-        timeSeriesData,
-      });
+    if (!currentSession) return;
 
-      const endedSession = {
-        ...currentSession,
-        endTime: new Date(),
-        data: timeSeriesData,
+    try {
+      if (!user?.token) {
+        console.error("No auth token available");
+        throw new Error("Authentication required");
+      }
+
+      // Calculate statistics before ending session
+      const stats = {
+        avgHeartRate: calculateAverage(timeSeriesData.heartRate),
+        maxHeartRate: calculateMax(timeSeriesData.heartRate),
+        minHeartRate: calculateMin(timeSeriesData.heartRate),
       };
 
-      try {
-        if (!user?.token) {
-          console.error("No auth token available");
-          throw new Error("Authentication required");
-        }
+      const sessionData = {
+        startTime: currentSession.startTime,
+        endTime: new Date(),
+        metricsData: timeSeriesData,
+        ...stats,
+      };
 
-        const sessionData = {
-          startTime: endedSession.startTime,
-          endTime: endedSession.endTime,
-          metricsData: endedSession.data,
-        };
+      const response = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(sessionData),
+      });
 
-        console.log("Sending session data:", sessionData);
-
-        const response = await fetch("/api/sessions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify(sessionData),
-        });
-
-        console.log("Save session response status:", response.status);
-
-        const responseData = await response.json();
-        console.log("Save session response:", responseData);
-
-        if (!response.ok) {
-          throw new Error(responseData.message || "Failed to save session");
-        }
-
-        setPreviousSessions((prev) => [endedSession, ...prev]);
-      } catch (err) {
-        console.error("Error saving session:", err);
-        setError("Failed to save session: " + err.message);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to save session");
       }
-    }
 
-    setIsSessionActive(false);
-    setCurrentSession(null);
-    sessionActiveRef.current = false;
+      setPreviousSessions((prev) => [
+        {
+          ...currentSession,
+          endTime: new Date(),
+          data: timeSeriesData,
+          ...stats,
+        },
+        ...prev,
+      ]);
+    } catch (err) {
+      console.error("Error saving session:", err);
+      setError("Failed to save session: " + err.message);
+    } finally {
+      setIsSessionActive(false);
+      setCurrentSession(null);
+      sessionActiveRef.current = false;
+    }
   };
 
-  // Load previous sessions when component mounts
+  // Helper functions for statistics
+  const calculateAverage = (data) => {
+    if (!Array.isArray(data) || data.length === 0) return 0;
+    const sum = data.reduce((acc, point) => acc + (point.value || 0), 0);
+    return sum / data.length;
+  };
+
+  const calculateMax = (data) => {
+    if (!Array.isArray(data) || data.length === 0) return 0;
+    return Math.max(...data.map((point) => point.value || 0));
+  };
+
+  const calculateMin = (data) => {
+    if (!Array.isArray(data) || data.length === 0) return 0;
+    return Math.min(...data.map((point) => point.value || 0));
+  };
+
+  // Load previous sessions
   useEffect(() => {
     const fetchSessions = async () => {
-      if (!user?.token) {
-        console.log("No auth token available, skipping session fetch");
-        return;
-      }
+      if (!user?.token) return;
 
       try {
         setIsLoading(true);
@@ -133,14 +154,11 @@ export const useSessionManager = () => {
           },
         });
 
-        console.log("Fetch sessions response status:", response.status);
-
         if (!response.ok) {
           throw new Error("Failed to fetch sessions");
         }
 
         const data = await response.json();
-        console.log("Fetched sessions:", data);
         setPreviousSessions(data.sessions || []);
       } catch (err) {
         console.error("Error fetching sessions:", err);
