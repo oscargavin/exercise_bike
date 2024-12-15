@@ -63,11 +63,22 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
       return sum / metricData.length;
     };
 
+    // Special handling for heart rate since it can come from two places
+    const heartRateFromMetrics = getAverage('heartRate');
+    const heartRateFromStats = session.stats?.avgHeartRate;
+    const finalHeartRate = heartRateFromStats || heartRateFromMetrics;
+
+    console.log('Heart Rate Calculation:', {
+      fromStats: heartRateFromStats,
+      fromMetrics: heartRateFromMetrics,
+      final: finalHeartRate
+    });
+
     return {
       speed: safeFixed(getAverage('speed')),
       power: safeFixed(getAverage('power')),
       cadence: safeFixed(getAverage('cadence')),
-      heartRate: safeFixed(session.stats?.avgHeartRate || getAverage('heartRate'))
+      heartRate: safeFixed(finalHeartRate)
     };
   };
 
