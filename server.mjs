@@ -292,10 +292,12 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
 });
 
 // Session routes with improved error handling
+// Replace the existing /api/sessions POST endpoint with this:
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
-    const { startTime, endTime, metricsData } = req.body;
+    const { startTime, endTime, metricsData, stats } = req.body;
 
+    // Validate required fields
     if (!startTime || !endTime || !metricsData) {
       return res.status(400).json({
         message: "Missing required fields",
@@ -303,16 +305,30 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       });
     }
 
+    // Insert session with heart rate data
     const result = await executeQuery(() =>
       client.query(
-        `INSERT INTO exercise_sessions (user_id, start_time, end_time, metrics_data)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, start_time, end_time, metrics_data`,
+        `INSERT INTO exercise_sessions (
+          user_id,
+          start_time,
+          end_time,
+          metrics_data,
+          avg_heart_rate,
+          max_heart_rate,
+          min_heart_rate,
+          heart_rate_zones
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, start_time, end_time, metrics_data, avg_heart_rate, max_heart_rate, min_heart_rate`,
         [
           req.userId,
           new Date(startTime),
           new Date(endTime),
           JSON.stringify(metricsData),
+          stats?.avgHeartRate || null,
+          stats?.maxHeartRate || null,
+          stats?.minHeartRate || null,
+          JSON.stringify(stats?.heartRateZones || {}),
         ]
       )
     );
@@ -323,6 +339,7 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error("Error saving session:", error);
+    console.error("Request body:", req.body); // Add this for debugging
     res.status(500).json({
       message: "Error saving session",
       error: error.message,
@@ -339,11 +356,19 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
 
     const result = await executeQuery(() =>
       client.query(
-        `SELECT id, start_time, end_time, metrics_data
-         FROM exercise_sessions
-         WHERE user_id = $1
-         ORDER BY start_time DESC
-         LIMIT $2 OFFSET $3`,
+        `SELECT 
+          id, 
+          start_time, 
+          end_time, 
+          metrics_data,
+          avg_heart_rate,
+          max_heart_rate,
+          min_heart_rate,
+          heart_rate_zones
+        FROM exercise_sessions
+        WHERE user_id = $1
+        ORDER BY start_time DESC
+        LIMIT $2 OFFSET $3`,
         [req.userId, limit, offset]
       )
     );
@@ -353,6 +378,12 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
       startTime: session.start_time,
       endTime: session.end_time,
       data: session.metrics_data,
+      stats: {
+        avgHeartRate: session.avg_heart_rate,
+        maxHeartRate: session.max_heart_rate,
+        minHeartRate: session.min_heart_rate,
+        heartRateZones: session.heart_rate_zones,
+      },
     }));
 
     res.json({
