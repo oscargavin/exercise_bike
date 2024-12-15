@@ -77,19 +77,71 @@ export const useSessionManager = () => {
         throw new Error("Authentication required");
       }
 
-      // Calculate statistics before ending session
+      // Ensure all metric data is properly structured
+      const formattedMetricsData = {
+        speed: timeSeriesData.speed || [],
+        cadence: timeSeriesData.cadence || [],
+        power: timeSeriesData.power || [],
+        heartRate: timeSeriesData.heartRate || [],
+      };
+
+      // Calculate statistics
       const stats = {
-        avgHeartRate: calculateAverage(timeSeriesData.heartRate),
-        maxHeartRate: calculateMax(timeSeriesData.heartRate),
-        minHeartRate: calculateMin(timeSeriesData.heartRate),
+        avgHeartRate:
+          formattedMetricsData.heartRate.length > 0
+            ? formattedMetricsData.heartRate.reduce(
+                (sum, point) => sum + point.value,
+                0
+              ) / formattedMetricsData.heartRate.length
+            : 0,
+        maxHeartRate:
+          formattedMetricsData.heartRate.length > 0
+            ? Math.max(
+                ...formattedMetricsData.heartRate.map((point) => point.value)
+              )
+            : 0,
+        minHeartRate:
+          formattedMetricsData.heartRate.length > 0
+            ? Math.min(
+                ...formattedMetricsData.heartRate.map((point) => point.value)
+              )
+            : 0,
       };
 
       const sessionData = {
-        startTime: currentSession.startTime,
-        endTime: new Date(),
-        metricsData: timeSeriesData,
-        ...stats,
+        startTime: currentSession.startTime.toISOString(),
+        endTime: new Date().toISOString(),
+        metricsData: formattedMetricsData,
+        stats: {
+          ...stats,
+          avgSpeed:
+            formattedMetricsData.speed.length > 0
+              ? formattedMetricsData.speed.reduce(
+                  (sum, point) => sum + point.value,
+                  0
+                ) / formattedMetricsData.speed.length
+              : 0,
+          avgPower:
+            formattedMetricsData.power.length > 0
+              ? formattedMetricsData.power.reduce(
+                  (sum, point) => sum + point.value,
+                  0
+                ) / formattedMetricsData.power.length
+              : 0,
+          avgCadence:
+            formattedMetricsData.cadence.length > 0
+              ? formattedMetricsData.cadence.reduce(
+                  (sum, point) => sum + point.value,
+                  0
+                ) / formattedMetricsData.cadence.length
+              : 0,
+        },
       };
+
+      console.log(
+        "Sending session data:",
+        JSON.stringify(sessionData, null, 2)
+      );
 
       const response = await fetch("/api/sessions", {
         method: "POST",
@@ -100,23 +152,26 @@ export const useSessionManager = () => {
         body: JSON.stringify(sessionData),
       });
 
+      const responseData = await response.json();
+      console.log("Server response:", responseData);
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to save session");
+        throw new Error(responseData.message || "Failed to save session");
       }
 
+      // Update previous sessions with the new session
       setPreviousSessions((prev) => [
         {
           ...currentSession,
           endTime: new Date(),
-          data: timeSeriesData,
-          ...stats,
+          data: formattedMetricsData,
+          stats: sessionData.stats,
         },
         ...prev,
       ]);
     } catch (err) {
       console.error("Error saving session:", err);
-      setError("Failed to save session: " + err.message);
+      setError("Failed to save session: " + (err.message || "Network error"));
     } finally {
       setIsSessionActive(false);
       setCurrentSession(null);
