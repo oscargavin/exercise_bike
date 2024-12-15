@@ -126,23 +126,35 @@ const StatsTracking = ({ sessions, userName }) => {
                 
                 {progressIndicators && (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                    {Object.entries(progressIndicators).map(([metric, change]) => (
-                      <div key={metric} className="bg-gray-800/40 rounded-lg p-4">
-                        <div className="text-sm text-gray-400 capitalize">
-                          {metric === 'heartRate' ? 'Heart Rate' : metric}
+                    {Object.entries(progressIndicators).map(([metric, change]) => {
+                      const getMetricDisplayName = (metricName) => {
+                        switch(metricName) {
+                          case 'heartRate': return 'Heart Rate';
+                          case 'resistance': return 'Resistance';
+                          case 'speed': return 'Speed';
+                          case 'cadence': return 'Cadence';
+                          default: return metricName;
+                        }
+                      };
+
+                      return (
+                        <div key={metric} className="bg-gray-800/40 rounded-lg p-4">
+                          <div className="text-sm text-gray-400">
+                            {getMetricDisplayName(metric)}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-lg font-semibold ${
+                              parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              {change > 0 ? '+' : ''}{change}%
+                            </span>
+                            <TrendingUp className={`w-4 h-4 ${
+                              parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
+                            }`} />
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`text-lg font-semibold ${
-                            parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            {change > 0 ? '+' : ''}{change}%
-                          </span>
-                          <TrendingUp className={`w-4 h-4 ${
-                            parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
-                          }`} />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
