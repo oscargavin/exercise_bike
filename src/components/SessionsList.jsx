@@ -1,14 +1,23 @@
 // src/components/SessionsList.jsx
 import React from 'react';
-import { formatDistanceToNow } from 'date-fns';
 
 const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
+  // Safe number formatting helper
+  const safeFixed = (value) => {
+    if (typeof value !== 'number' || isNaN(value)) return '0.0';
+    return value.toFixed(1);
+  };
+
   // Calculate averages across all sessions
   const averages = sessions.reduce(
     (acc, session) => {
       const data = session.data || session.metrics_data || {};
-      const getAverage = (metric) =>
-        data[metric]?.reduce((sum, point) => sum + point.value, 0) / (data[metric]?.length || 1);
+      const getAverage = (metric) => {
+        const metricData = data[metric] || [];
+        if (metricData.length === 0) return 0;
+        const sum = metricData.reduce((sum, point) => sum + (point.value || 0), 0);
+        return sum / metricData.length;
+      };
 
       return {
         speed: acc.speed + getAverage('speed'),
@@ -20,11 +29,24 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
     { speed: 0, power: 0, cadence: 0, heartRate: 0 }
   );
 
-  const sessionCount = sessions.length;
-  const avgSpeed = (averages.speed / sessionCount).toFixed(1);
-  const avgPower = (averages.power / sessionCount).toFixed(1);
-  const avgCadence = (averages.cadence / sessionCount).toFixed(1);
-  const avgHeartRate = (averages.heartRate / sessionCount).toFixed(1);
+  const sessionCount = Math.max(sessions.length, 1);
+  const avgSpeed = safeFixed(averages.speed / sessionCount);
+  const avgPower = safeFixed(averages.power / sessionCount);
+  const avgCadence = safeFixed(averages.cadence / sessionCount);
+  const avgHeartRate = safeFixed(averages.heartRate / sessionCount);
+
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const sessionDate = new Date(date);
+    const diffInSeconds = Math.floor((now - sessionDate) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    return sessionDate.toLocaleDateString();
+  };
 
   const formatDuration = (startTime, endTime) => {
     const duration = new Date(endTime) - new Date(startTime);
@@ -34,14 +56,18 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
 
   const getSessionAverages = (session) => {
     const data = session.data || session.metrics_data || {};
-    const getAverage = (metric) =>
-      data[metric]?.reduce((sum, point) => sum + point.value, 0) / (data[metric]?.length || 1);
+    const getAverage = (metric) => {
+      const metricData = data[metric] || [];
+      if (metricData.length === 0) return 0;
+      const sum = metricData.reduce((sum, point) => sum + (point.value || 0), 0);
+      return sum / metricData.length;
+    };
 
     return {
-      speed: getAverage('speed').toFixed(1),
-      power: getAverage('power').toFixed(1),
-      cadence: getAverage('cadence').toFixed(1),
-      heartRate: (session.stats?.avgHeartRate || getAverage('heartRate') || 0).toFixed(1)
+      speed: safeFixed(getAverage('speed')),
+      power: safeFixed(getAverage('power')),
+      cadence: safeFixed(getAverage('cadence')),
+      heartRate: safeFixed(session.stats?.avgHeartRate || getAverage('heartRate'))
     };
   };
 
@@ -70,9 +96,7 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
         {sessions.map((session) => {
           const isSelected = selectedSession?.id === session.id;
           const averages = getSessionAverages(session);
-          const timeAgo = formatDistanceToNow(new Date(session.startTime || session.start_time), {
-            addSuffix: true,
-          });
+          const timeAgo = formatTimeAgo(session.startTime || session.start_time);
           const duration = formatDuration(
             session.startTime || session.start_time,
             session.endTime || session.end_time
