@@ -134,6 +134,74 @@ async function setupDatabase() {
       console.log("Heart rate columns already exist, skipping updates");
     }
 
+    // Resistance tracking updates
+    console.log("Starting resistance tracking updates...");
+
+    // Check if resistance columns exist
+    const resistanceColumnsExist = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'exercise_sessions' AND column_name = 'avg_resistance'
+      );
+    `);
+
+    if (!resistanceColumnsExist.rows[0].exists) {
+      console.log("Adding resistance tracking capabilities...");
+
+      // Start transaction for resistance updates
+      await client.query("BEGIN");
+
+      try {
+        // Backup existing metrics_data if not already backed up
+        await client.query(`
+          ALTER TABLE exercise_sessions 
+          ADD COLUMN IF NOT EXISTS metrics_data_backup JSONB;
+        `);
+
+        await client.query(`
+          UPDATE exercise_sessions 
+          SET metrics_data_backup = metrics_data 
+          WHERE metrics_data_backup IS NULL;
+        `);
+
+        // Add resistance array to existing metrics_data
+        await client.query(`
+          UPDATE exercise_sessions 
+          SET metrics_data = jsonb_set(
+            COALESCE(metrics_data, '{}'::jsonb),
+            '{resistance}',
+            '[]'::jsonb,
+            true
+          )
+          WHERE metrics_data IS NOT NULL;
+        `);
+
+        // Add resistance statistics columns
+        await client.query(`
+          ALTER TABLE exercise_sessions
+          ADD COLUMN avg_resistance DECIMAL,
+          ADD COLUMN max_resistance INTEGER,
+          ADD COLUMN min_resistance INTEGER;
+        `);
+
+        // Create index for resistance statistics
+        await client.query(`
+          CREATE INDEX idx_sessions_resistance_stats 
+          ON exercise_sessions (avg_resistance, max_resistance);
+        `);
+
+        // Commit transaction
+        await client.query("COMMIT");
+        console.log("Resistance tracking updates completed successfully");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    } else {
+      console.log("Resistance columns already exist, skipping updates");
+    }
+
+    console.log("All database updates completed successfully");
     process.exit(0);
   } catch (error) {
     console.error("Error setting up database:", error);

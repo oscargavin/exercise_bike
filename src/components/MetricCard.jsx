@@ -4,7 +4,16 @@ import { Badge } from './ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Heart } from 'lucide-react';
 
-const MetricCard = ({ title, emoji, data = [], color, unit, isLive, isHeartRate = false }) => {
+const MetricCard = ({
+  title,
+  emoji,
+  data = [],
+  color,
+  unit,
+  isLive,
+  isHeartRate = false,
+  isResistance = false
+}) => {
   // Ensure data is always an array and has valid structure
   const safeData = Array.isArray(data) ? data : [];
   
@@ -13,11 +22,11 @@ const MetricCard = ({ title, emoji, data = [], color, unit, isLive, isHeartRate 
   
   // Helper function to determine heart rate zone color
   const getHeartRateColor = (bpm) => {
-    if (bpm < 60) return '#3b82f6'; // Very Light - Blue
+    if (bpm < 60) return '#3b82f6';  // Very Light - Blue
     if (bpm < 100) return '#10b981'; // Light - Green
     if (bpm < 140) return '#f59e0b'; // Moderate - Yellow
     if (bpm < 170) return '#f97316'; // Hard - Orange
-    return '#ef4444'; // Maximum - Red
+    return '#ef4444';                // Maximum - Red
   };
 
   const getHeartRateZone = (bpm) => {
@@ -46,7 +55,8 @@ const MetricCard = ({ title, emoji, data = [], color, unit, isLive, isHeartRate 
         </CardTitle>
         <div className="flex items-center">
           <div className="text-2xl font-bold text-white">
-            {latestValue.toFixed(1)}{unit}
+            {isResistance ? latestValue.toFixed(0) : latestValue.toFixed(1)}
+            {unit}
           </div>
           {isHeartRate && (
             <span
@@ -61,25 +71,25 @@ const MetricCard = ({ title, emoji, data = [], color, unit, isLive, isHeartRate 
       <CardContent>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart 
-              data={safeData} 
+            <LineChart
+              data={safeData}
               isAnimationActive={false}
               margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis 
-                dataKey="time" 
+              <XAxis
+                dataKey="time"
                 tick={{ fontSize: 12, fill: '#9CA3AF' }}
                 stroke="#4B5563"
               />
-              <YAxis 
+              <YAxis
                 unit={unit}
                 tick={{ fontSize: 12, fill: '#9CA3AF' }}
                 stroke="#4B5563"
-                domain={isHeartRate ? [30, 200] : ['auto', 'auto']}
+                domain={isHeartRate ? [30, 200] : isResistance ? [0, 100] : ['auto', 'auto']}
               />
-              <Tooltip 
-                contentStyle={{ 
+              <Tooltip
+                contentStyle={{
                   backgroundColor: '#1F2937',
                   border: '1px solid #374151',
                   borderRadius: '0.5rem'

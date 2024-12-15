@@ -140,15 +140,17 @@ function Dashboard() {
               isLive={!selectedSession}
             />
             <MetricCard
-              title="Power"
-              emoji="⚡"
-              data={selectedSession ? getSessionData(selectedSession).power : timeSeriesData.power}
+              title="Resistance"
+              emoji="💪"
+              data={selectedSession ? getSessionData(selectedSession).resistance : timeSeriesData.resistance}
               color="#ef4444"
-              unit="W"
+              unit="%"
               isLive={!selectedSession}
+              isResistance={true}
             />
             <MetricCard
               title="Heart Rate"
+              emoji="❤️"
               data={selectedSession ? getSessionData(selectedSession).heartRate : timeSeriesData.heartRate}
               color="#f97316"
               unit="bpm"

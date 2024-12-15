@@ -41,25 +41,21 @@ export const useSessionManager = () => {
   }, []);
 
   const startNewSession = () => {
-    console.log("Starting new session");
-    setSelectedSession(null);
-
     const newSession = {
       id: Date.now(),
       startTime: new Date(),
       data: {
         speed: [],
         cadence: [],
-        power: [],
+        resistance: [], // Add resistance array
         heartRate: [],
       },
     };
 
-    // Reset all metrics to empty arrays
     setTimeSeriesData({
       speed: [],
       cadence: [],
-      power: [],
+      resistance: [],
       heartRate: [],
     });
 
@@ -77,35 +73,19 @@ export const useSessionManager = () => {
         throw new Error("Authentication required");
       }
 
-      // Ensure all metric data is properly structured
       const formattedMetricsData = {
         speed: timeSeriesData.speed || [],
         cadence: timeSeriesData.cadence || [],
-        power: timeSeriesData.power || [],
+        resistance: timeSeriesData.resistance || [], // Add resistance data
         heartRate: timeSeriesData.heartRate || [],
       };
 
-      // Calculate statistics
       const stats = {
-        avgHeartRate:
-          formattedMetricsData.heartRate.length > 0
-            ? formattedMetricsData.heartRate.reduce(
-                (sum, point) => sum + point.value,
-                0
-              ) / formattedMetricsData.heartRate.length
-            : 0,
-        maxHeartRate:
-          formattedMetricsData.heartRate.length > 0
-            ? Math.max(
-                ...formattedMetricsData.heartRate.map((point) => point.value)
-              )
-            : 0,
-        minHeartRate:
-          formattedMetricsData.heartRate.length > 0
-            ? Math.min(
-                ...formattedMetricsData.heartRate.map((point) => point.value)
-              )
-            : 0,
+        avgHeartRate: calculateAverage(formattedMetricsData.heartRate),
+        maxHeartRate: calculateMax(formattedMetricsData.heartRate),
+        minHeartRate: calculateMin(formattedMetricsData.heartRate),
+        avgResistance: calculateAverage(formattedMetricsData.resistance), // Add resistance stats
+        maxResistance: calculateMax(formattedMetricsData.resistance),
       };
 
       const sessionData = {

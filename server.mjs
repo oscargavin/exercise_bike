@@ -317,7 +317,7 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       });
     }
 
-    // Insert session with heart rate data
+    // Insert session with both heart rate and resistance data
     const insertQuery = `
       INSERT INTO exercise_sessions (
         user_id,
@@ -326,20 +326,28 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
         metrics_data,
         avg_heart_rate,
         max_heart_rate,
-        min_heart_rate
+        min_heart_rate,
+        avg_resistance,
+        max_resistance,
+        min_resistance
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, start_time, end_time, metrics_data, avg_heart_rate, max_heart_rate, min_heart_rate
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id, start_time, end_time, metrics_data, 
+        avg_heart_rate, max_heart_rate, min_heart_rate,
+        avg_resistance, max_resistance, min_resistance
     `;
 
     const values = [
       req.userId,
       new Date(startTime),
       new Date(endTime),
-      metricsData, // PostgreSQL will automatically stringify the JSON
+      metricsData,
       stats?.avgHeartRate || null,
       stats?.maxHeartRate || null,
       stats?.minHeartRate || null,
+      stats?.avgResistance || null,
+      stats?.maxResistance || null,
+      stats?.minResistance || null,
     ];
 
     // Log the query and values for debugging
@@ -388,7 +396,9 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
           avg_heart_rate,
           max_heart_rate,
           min_heart_rate,
-          heart_rate_zones
+          avg_resistance,
+          max_resistance,
+          min_resistance
         FROM exercise_sessions
         WHERE user_id = $1
         ORDER BY start_time DESC
@@ -406,7 +416,9 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
         avgHeartRate: session.avg_heart_rate,
         maxHeartRate: session.max_heart_rate,
         minHeartRate: session.min_heart_rate,
-        heartRateZones: session.heart_rate_zones,
+        avgResistance: session.avg_resistance,
+        maxResistance: session.max_resistance,
+        minResistance: session.min_resistance,
       },
     }));
 
