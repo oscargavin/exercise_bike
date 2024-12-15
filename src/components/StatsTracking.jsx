@@ -14,47 +14,6 @@ const StatsTracking = ({ sessions, userName }) => {
     return date.toLocaleDateString('en-US', { weekday: 'long' });
   }, [sessions]);
 
-  // Process session data for trend analysis
-  const trendData = useMemo(() => {
-    if (!sessions.length) return [];
-
-    return sessions.map(session => {
-      const stats = calculateSessionStats(session.data);
-      return {
-        date: new Date(session.startTime).toLocaleDateString(),
-        speed: stats.avgSpeed,
-        power: stats.avgPower,
-        cadence: stats.avgCadence,
-        heartRate: stats.avgHeartRate,
-        resistance: stats.avgResistance
-      };
-    }).sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [sessions]);
-
-  // Calculate percentile rankings for the latest session
-  const percentileRankings = useMemo(() => {
-    if (sessions.length < 2) return null;
-
-    const metrics = ['speed', 'power', 'cadence', 'heartRate'];
-    const rankings = {};
-
-    metrics.forEach(metric => {
-      const allValues = sessions.map(session => {
-        const stats = calculateSessionStats(session.data);
-        return stats[`avg${metric.charAt(0).toUpperCase() + metric.slice(1)}`];
-      });
-
-      const currentStats = calculateSessionStats(sessions[0].data);
-      const currentValue = currentStats[`avg${metric.charAt(0).toUpperCase() + metric.slice(1)}`];
-      
-      const sortedValues = [...allValues].sort((a, b) => a - b);
-      const rank = sortedValues.indexOf(currentValue);
-      rankings[metric] = ((rank / (sortedValues.length - 1)) * 100).toFixed(1);
-    });
-
-    return rankings;
-  }, [sessions]);
-
   // Calculate progress indicators
   const progressIndicators = useMemo(() => {
     if (sessions.length < 2) return null;
@@ -69,7 +28,7 @@ const StatsTracking = ({ sessions, userName }) => {
     
     return {
       speed: calculateChange(latestStats.avgSpeed, previousStats.avgSpeed),
-      power: calculateChange(latestStats.avgPower, previousStats.avgPower),
+      resistance: calculateChange(latestStats.avgResistance, previousStats.avgResistance),
       cadence: calculateChange(latestStats.avgCadence, previousStats.avgCadence),
       heartRate: calculateChange(latestStats.avgHeartRate, previousStats.avgHeartRate)
     };
@@ -77,7 +36,6 @@ const StatsTracking = ({ sessions, userName }) => {
 
   return (
     <div>
-      {/* Collapsible Header */}
       <button
         onClick={() => setShowInsights(!showInsights)}
         className="w-full flex items-center space-x-2 mb-6 group"
@@ -94,13 +52,12 @@ const StatsTracking = ({ sessions, userName }) => {
         <div className="h-px bg-blue-500/20 flex-grow" />
       </button>
 
-      {/* Collapsible Content */}
       <div
         className={`transition-all duration-300 ease-in-out space-y-8 overflow-hidden ${
           showInsights ? 'opacity-100 max-h-[5000px]' : 'opacity-0 max-h-0'
         }`}
       >
-        {/* Welcome Section */}
+        {/* Welcome Section with Progress Indicators */}
         {showWelcome && (
           <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20 relative">
             <button
@@ -161,7 +118,6 @@ const StatsTracking = ({ sessions, userName }) => {
             </div>
           </div>
         )}
-
         {/* Trend Analysis Chart */}
         <Card className="bg-gray-800/50 border-gray-700">
           <CardHeader>
