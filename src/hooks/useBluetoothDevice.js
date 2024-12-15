@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import {
   BLUETOOTH_SERVICES,
-  CSC_CHARACTERISTICS,
+  CHARACTERISTICS,
 } from "../constants/bluetoothConstants";
 import { detectEnvironment } from "../utils/environment";
 
@@ -25,7 +25,7 @@ export const useBluetoothDevice = (onDataReceived) => {
 
   const handleCscService = async (service) => {
     const characteristic = await service.getCharacteristic(
-      CSC_CHARACTERISTICS.MEASUREMENT
+      CHARACTERISTICS.MEASUREMENT
     );
     await characteristic.startNotifications();
     characteristic.addEventListener("characteristicvaluechanged", (event) =>
