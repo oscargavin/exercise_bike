@@ -19,43 +19,44 @@ const StatsTracking = ({ sessions, userName }) => {
   // Process session data for trend analysis
   const trendData = useMemo(() => {
     if (!sessions.length) return [];
-
+  
     return sessions.map(session => {
       const data = session.data || session.metrics_data || {};
       const avgSpeed = data.speed?.reduce((sum, point) => sum + point.value, 0) / data.speed?.length || 0;
       const avgPower = data.power?.reduce((sum, point) => sum + point.value, 0) / data.power?.length || 0;
       const avgCadence = data.cadence?.reduce((sum, point) => sum + point.value, 0) / data.cadence?.length || 0;
-      const avgCalories = data.calories?.reduce((sum, point) => sum + point.value, 0) / data.calories?.length || 0;
-
+      const avgHeartRate = data.heartRate?.reduce((sum, point) => sum + point.value, 0) / data.heartRate?.length || 0;
+  
       return {
         date: new Date(session.startTime || session.start_time).toLocaleDateString(),
         speed: avgSpeed,
         power: avgPower,
         cadence: avgCadence,
-        calories: avgCalories,
+        heartRate: avgHeartRate
       };
     }).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [sessions]);
+  
 
   // Calculate percentile rankings for the latest session
   const percentileRankings = useMemo(() => {
     if (sessions.length < 2) return null;
-
-    const metrics = ['speed', 'power', 'cadence', 'calories'];
+  
+    const metrics = ['speed', 'power', 'cadence', 'heartRate'];
     const rankings = {};
-
+  
     metrics.forEach(metric => {
       const allValues = sessions.map(session => {
         const data = session.data || session.metrics_data || {};
         return data[metric]?.reduce((sum, point) => sum + point.value, 0) / data[metric]?.length || 0;
       });
-
+  
       const latestValue = allValues[allValues.length - 1];
       const sortedValues = [...allValues].sort((a, b) => a - b);
       const rank = sortedValues.indexOf(latestValue);
       rankings[metric] = ((rank / (sortedValues.length - 1)) * 100).toFixed(1);
     });
-
+  
     return rankings;
   }, [sessions]);
 
@@ -206,9 +207,9 @@ const StatsTracking = ({ sessions, userName }) => {
                   />
                   <Line
                     type="monotone"
-                    dataKey="calories"
-                    name="Calories (kcal)"
-                    stroke="#f97316"
+                    dataKey="heartRate"
+                    name="Heart Rate (bpm)"
+                    stroke="#ef4444"
                     strokeWidth={2}
                   />
                 </LineChart>
@@ -250,9 +251,9 @@ const StatsTracking = ({ sessions, userName }) => {
                   <div className="text-xs text-gray-500">percentile</div>
                 </div>
                 <div className="bg-gray-800/70 rounded-lg p-4">
-                  <div className="text-sm text-gray-400">Calories Ranking</div>
+                  <div className="text-sm text-gray-400">Heart Rate Ranking</div>
                   <div className="text-xl font-bold text-white">
-                    {percentileRankings.calories}%
+                    {percentileRankings.heartRate}%
                   </div>
                   <div className="text-xs text-gray-500">percentile</div>
                 </div>

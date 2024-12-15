@@ -6,7 +6,7 @@ import Dashboard from './pages/Dashboard';
 import SignUp from './pages/SignUp';
 import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
+import ResetPassword from './components/ResetPassword';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {

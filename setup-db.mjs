@@ -1,6 +1,5 @@
 import { config } from "dotenv";
 import { createClient } from "@vercel/postgres";
-
 config();
 
 const client = createClient({
@@ -62,9 +61,77 @@ async function setupDatabase() {
         `CREATE INDEX idx_users_reset_token ON users(reset_token)`
       );
 
-      console.log("Database setup completed successfully");
+      console.log("Initial database setup completed successfully");
     } else {
-      console.log("Tables already exist, skipping creation");
+      console.log("Tables already exist, skipping initial creation");
+    }
+
+    // Heart rate updates - these will run regardless of whether tables existed
+    console.log("Starting heart rate tracking updates...");
+
+    // Check if heart rate columns exist
+    const heartRateColumnsExist = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'exercise_sessions' AND column_name = 'avg_heart_rate'
+      );
+    `);
+
+    if (!heartRateColumnsExist.rows[0].exists) {
+      console.log("Adding heart rate tracking capabilities...");
+
+      // Start transaction for heart rate updates
+      await client.query("BEGIN");
+
+      try {
+        // Backup existing metrics_data
+        await client.query(`
+          ALTER TABLE exercise_sessions 
+          ADD COLUMN IF NOT EXISTS metrics_data_backup JSONB;
+        `);
+
+        await client.query(`
+          UPDATE exercise_sessions 
+          SET metrics_data_backup = metrics_data 
+          WHERE metrics_data_backup IS NULL;
+        `);
+
+        // Add heart rate array to existing metrics_data
+        await client.query(`
+          UPDATE exercise_sessions 
+          SET metrics_data = jsonb_set(
+            COALESCE(metrics_data, '{}'::jsonb),
+            '{heartRate}',
+            '[]'::jsonb,
+            true
+          )
+          WHERE metrics_data IS NOT NULL;
+        `);
+
+        // Add heart rate statistics columns
+        await client.query(`
+          ALTER TABLE exercise_sessions
+          ADD COLUMN avg_heart_rate DECIMAL,
+          ADD COLUMN max_heart_rate INTEGER,
+          ADD COLUMN min_heart_rate INTEGER,
+          ADD COLUMN heart_rate_zones JSONB;
+        `);
+
+        // Create index for heart rate statistics
+        await client.query(`
+          CREATE INDEX idx_sessions_heart_rate_stats 
+          ON exercise_sessions (avg_heart_rate, max_heart_rate);
+        `);
+
+        // Commit transaction
+        await client.query("COMMIT");
+        console.log("Heart rate tracking updates completed successfully");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    } else {
+      console.log("Heart rate columns already exist, skipping updates");
     }
 
     process.exit(0);

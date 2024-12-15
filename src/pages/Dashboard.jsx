@@ -23,21 +23,38 @@ function Dashboard() {
     endSession,
   } = useSessionManager();
 
-  const { user } = useAuth();  // Add this line
-  const { isConnected, deviceInfo, connect, disconnect } = useBluetoothDevice((data) => {
+  const { user } = useAuth();
+
+  const handleBikeData = (data) => {
     const processedData = processBluetoothData(data);
     if (processedData) {
       Object.entries(processedData).forEach(([metric, value]) => {
         if (value > 0) updateMetric(metric, value);
       });
     }
-  });
+  };
 
-  const handleDisconnect = () => {
+  const handleHeartRateData = (heartRate) => {
+    if (heartRate > 0) {
+      updateMetric('heartRate', heartRate);
+    }
+  };
+
+  const {
+    connectedDevices,
+    connectionStatus,
+    connectToDevice,
+    disconnectDevice,
+    isBikeConnected,
+    isHeartRateConnected
+  } = useMultipleBluetoothDevices(handleBikeData, handleHeartRateData);
+
+  const handleDisconnect = async () => {
     if (isSessionActive) {
       endSession();
     }
-    disconnect();
+    await disconnectDevice(DEVICE_TYPES.BIKE);
+    await disconnectDevice(DEVICE_TYPES.HEART_RATE);
   };
 
   // Helper function to safely get session data
@@ -56,10 +73,12 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
       <Navbar
-        isConnected={isConnected}
-        deviceInfo={deviceInfo}
+        isBikeConnected={isBikeConnected}
+        isHeartRateConnected={isHeartRateConnected}
+        deviceInfo={connectedDevices[DEVICE_TYPES.BIKE]}
         isSessionActive={isSessionActive}
-        connect={connect}
+        onConnectBike={() => connectToDevice(DEVICE_TYPES.BIKE)}
+        onConnectHeartRate={() => connectToDevice(DEVICE_TYPES.HEART_RATE)}
         handleDisconnect={handleDisconnect}
         startNewSession={startNewSession}
         endSession={endSession}
@@ -127,12 +146,12 @@ function Dashboard() {
               isLive={!selectedSession}
             />
             <MetricCard
-              title="Calories"
-              emoji="🔥"
-              data={selectedSession ? getSessionData(selectedSession).calories : timeSeriesData.calories}
+              title="Heart Rate"
+              data={selectedSession ? getSessionData(selectedSession).heartRate : timeSeriesData.heartRate}
               color="#f97316"
-              unit="kcal"
+              unit="bpm"
               isLive={!selectedSession}
+              isHeartRate={true}
             />
           </div>
         )}
