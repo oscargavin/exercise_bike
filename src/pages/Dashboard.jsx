@@ -59,15 +59,6 @@ function Dashboard() {
     await disconnectDevice(DEVICE_TYPES.HEART_RATE);
   };
 
-  const handleSessionSelect = (session) => {
-    if (session) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    setTimeout(() => {
-      setSelectedSession(session);
-    }, session ? 300 : 0);
-  };
-
   // Helper function to safely get session data
   const getSessionData = (session) => {
     if (!session) return null;
@@ -105,13 +96,15 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Metrics Grid */}
-        <div className={`transition-all duration-500 ease-in-out ${
-          isSessionActive || selectedSession 
-            ? 'opacity-100 max-h-[2000px]' 
-            : 'opacity-0 max-h-0 overflow-hidden'
-        }`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Metrics Grid with smooth transition */}
+        <div 
+          className={`transform transition-all duration-300 ease-in-out origin-top ${
+            isSessionActive || selectedSession 
+              ? 'opacity-100 scale-100 translate-y-0 h-auto mb-8' 
+              : 'opacity-0 scale-95 -translate-y-4 h-0 overflow-hidden mb-0'
+          }`}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MetricCard
               title="Speed"
               emoji="🏃"
@@ -170,7 +163,7 @@ function Dashboard() {
             <SessionsList
               sessions={previousSessions}
               selectedSession={selectedSession}
-              onSelectSession={handleSessionSelect}
+              onSelectSession={setSelectedSession}
             />
           )}
         </div>
