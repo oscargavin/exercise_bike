@@ -4,8 +4,12 @@ import { Badge } from './ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Heart } from 'lucide-react';
 
-const MetricCard = ({ title, emoji, data, color, unit, isLive, isHeartRate = false }) => {
-  const latestValue = data[data.length - 1]?.value || 0;
+const MetricCard = ({ title, emoji, data = [], color, unit, isLive, isHeartRate = false }) => {
+  // Ensure data is always an array and has valid structure
+  const safeData = Array.isArray(data) ? data : [];
+  
+  const latestValue = safeData.length > 0 ? 
+    (safeData[safeData.length - 1]?.value || 0) : 0;
   
   // Helper function to determine heart rate zone color
   const getHeartRateColor = (bpm) => {
@@ -57,7 +61,11 @@ const MetricCard = ({ title, emoji, data, color, unit, isLive, isHeartRate = fal
       <CardContent>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} isAnimationActive={false}>
+            <LineChart 
+              data={safeData} 
+              isAnimationActive={false}
+              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis 
                 dataKey="time" 
