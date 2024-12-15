@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
 import { Sparkles, TrendingUp, ChevronRight, LightbulbIcon, X } from 'lucide-react';
 import _ from 'lodash';
 
@@ -19,14 +18,15 @@ const StatsTracking = ({ sessions, userName }) => {
   // Process session data for trend analysis
   const trendData = useMemo(() => {
     if (!sessions.length) return [];
-  
+
     return sessions.map(session => {
       const data = session.data || session.metrics_data || {};
       const avgSpeed = data.speed?.reduce((sum, point) => sum + point.value, 0) / data.speed?.length || 0;
       const avgPower = data.power?.reduce((sum, point) => sum + point.value, 0) / data.power?.length || 0;
       const avgCadence = data.cadence?.reduce((sum, point) => sum + point.value, 0) / data.cadence?.length || 0;
-      const avgHeartRate = data.heartRate?.reduce((sum, point) => sum + point.value, 0) / data.heartRate?.length || 0;
-  
+      const avgHeartRate = session.stats?.avgHeartRate || 
+        (data.heartRate?.reduce((sum, point) => sum + point.value, 0) / data.heartRate?.length) || 0;
+
       return {
         date: new Date(session.startTime || session.start_time).toLocaleDateString(),
         speed: avgSpeed,
@@ -36,27 +36,30 @@ const StatsTracking = ({ sessions, userName }) => {
       };
     }).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [sessions]);
-  
 
   // Calculate percentile rankings for the latest session
   const percentileRankings = useMemo(() => {
     if (sessions.length < 2) return null;
-  
+
     const metrics = ['speed', 'power', 'cadence', 'heartRate'];
     const rankings = {};
-  
+
     metrics.forEach(metric => {
       const allValues = sessions.map(session => {
         const data = session.data || session.metrics_data || {};
+        if (metric === 'heartRate') {
+          return session.stats?.avgHeartRate || 
+            (data[metric]?.reduce((sum, point) => sum + point.value, 0) / data[metric]?.length) || 0;
+        }
         return data[metric]?.reduce((sum, point) => sum + point.value, 0) / data[metric]?.length || 0;
       });
-  
+
       const latestValue = allValues[allValues.length - 1];
       const sortedValues = [...allValues].sort((a, b) => a - b);
       const rank = sortedValues.indexOf(latestValue);
       rankings[metric] = ((rank / (sortedValues.length - 1)) * 100).toFixed(1);
     });
-  
+
     return rankings;
   }, [sessions]);
 
@@ -71,7 +74,7 @@ const StatsTracking = ({ sessions, userName }) => {
       speed: ((latestSession.speed - previousSession.speed) / previousSession.speed * 100).toFixed(1),
       power: ((latestSession.power - previousSession.power) / previousSession.power * 100).toFixed(1),
       cadence: ((latestSession.cadence - previousSession.cadence) / previousSession.cadence * 100).toFixed(1),
-      calories: ((latestSession.calories - previousSession.calories) / previousSession.calories * 100).toFixed(1)
+      heartRate: ((latestSession.heartRate - previousSession.heartRate) / previousSession.heartRate * 100).toFixed(1)
     };
   }, [trendData]);
 
@@ -132,7 +135,9 @@ const StatsTracking = ({ sessions, userName }) => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                     {Object.entries(progressIndicators).map(([metric, change]) => (
                       <div key={metric} className="bg-gray-800/40 rounded-lg p-4">
-                        <div className="text-sm text-gray-400 capitalize mb-1">{metric}</div>
+                        <div className="text-sm text-gray-400 capitalize">
+                          {metric === 'heartRate' ? 'Heart Rate' : metric}
+                        </div>
                         <div className="flex items-center space-x-2">
                           <span className={`text-lg font-semibold ${
                             parseFloat(change) > 0 ? 'text-green-400' : 'text-red-400'
@@ -164,7 +169,7 @@ const StatsTracking = ({ sessions, userName }) => {
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 12, fill: '#9CA3AF' }}
@@ -209,7 +214,7 @@ const StatsTracking = ({ sessions, userName }) => {
                     type="monotone"
                     dataKey="heartRate"
                     name="Heart Rate (bpm)"
-                    stroke="#ef4444"
+                    stroke="#f97316"
                     strokeWidth={2}
                   />
                 </LineChart>
