@@ -15,15 +15,15 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
       const stats = calculateSessionStats(session.data);
       return {
         speed: acc.speed + stats.avgSpeed,
-        power: acc.power + stats.avgPower,
+        resistance: acc.resistance + stats.avgResistance,
         cadence: acc.cadence + stats.avgCadence,
         heartRate: acc.heartRate + stats.avgHeartRate
       };
-    }, { speed: 0, power: 0, cadence: 0, heartRate: 0 });
+    }, { speed: 0, resistance: 0, cadence: 0, heartRate: 0 });
 
     return {
       avgSpeed: totals.speed / sessions.length,
-      avgPower: totals.power / sessions.length,
+      avgResistance: totals.resistance / sessions.length,
       avgCadence: totals.cadence / sessions.length,
       avgHeartRate: totals.heartRate / sessions.length
     };
@@ -40,9 +40,9 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
           </div>
         </div>
         <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-400">Avg Power</div>
+          <div className="text-sm text-gray-400">Avg Resistance</div>
           <div className="text-xl font-bold text-white">
-            {safeFixed(overallStats.avgPower)} W
+            {safeFixed(overallStats.avgResistance)}%
           </div>
         </div>
         <div className="bg-gray-800/50 rounded-lg p-4">
@@ -92,9 +92,9 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-400">Power</div>
+                  <div className="text-sm text-gray-400">Resistance</div>
                   <div className="font-medium text-white">
-                    {safeFixed(stats.avgPower)} W
+                    {safeFixed(stats.avgResistance)}%
                   </div>
                 </div>
                 <div>
