@@ -59,6 +59,15 @@ function Dashboard() {
     await disconnectDevice(DEVICE_TYPES.HEART_RATE);
   };
 
+  const handleSessionSelect = (session) => {
+    if (session) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setTimeout(() => {
+      setSelectedSession(session);
+    }, session ? 300 : 0);
+  };
+
   // Helper function to safely get session data
   const getSessionData = (session) => {
     if (!session) return null;
@@ -67,8 +76,8 @@ function Dashboard() {
     return {
       speed: [],
       cadence: [],
-      power: [],
-      calories: []
+      resistance: [],
+      heartRate: []
     };
   };
 
@@ -88,16 +97,21 @@ function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {previousSessions.length > 0 && (
-            <div className="mb-8">
-                <StatsTracking 
-                    sessions={previousSessions}
-                    userName={user?.name}
-                />
-            </div>
+          <div className="mb-8">
+            <StatsTracking
+              sessions={previousSessions}
+              userName={user?.name}
+            />
+          </div>
         )}
+
         {/* Metrics Grid */}
-        {(isSessionActive || selectedSession) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`transition-all duration-500 ease-in-out ${
+          isSessionActive || selectedSession 
+            ? 'opacity-100 max-h-[2000px]' 
+            : 'opacity-0 max-h-0 overflow-hidden'
+        }`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <MetricCard
               title="Speed"
               emoji="🏃"
@@ -133,9 +147,10 @@ function Dashboard() {
               isHeartRate={true}
             />
           </div>
-        )}
+        </div>
+
         {/* Previous Sessions */}
-        <div className="mb-8 bg-gray-800/50 border-gray-700 rounded-lg p-6">
+        <div className="bg-gray-800/50 border-gray-700 rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-white">Previous Sessions</h2>
             {isLoading && (
@@ -155,7 +170,7 @@ function Dashboard() {
             <SessionsList
               sessions={previousSessions}
               selectedSession={selectedSession}
-              onSelectSession={setSelectedSession}
+              onSelectSession={handleSessionSelect}
             />
           )}
         </div>
