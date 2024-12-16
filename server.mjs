@@ -291,6 +291,33 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
   }
 });
 
+// Update user preferences endpoint
+app.put("/api/user/preferences", verifyToken, async (req, res) => {
+  try {
+    const { show_insights } = req.body;
+
+    const result = await executeQuery(() =>
+      client.query(
+        `UPDATE users 
+         SET show_insights = $1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2
+         RETURNING id, email, name, age, height, weight, profile_picture, show_insights`,
+        [show_insights, req.userId]
+      )
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error("Error updating preferences:", error);
+    res.status(500).json({ message: "Error updating preferences" });
+  }
+});
+
 // Session routes
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
