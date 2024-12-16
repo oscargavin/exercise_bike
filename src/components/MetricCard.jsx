@@ -7,8 +7,7 @@ import { createPortal } from 'react-dom';
 import { getHeartRateZone } from '@/utils/stats';
 import { cn } from '@/lib/utils';
 
-const ExpandedView = ({ children, onClose }) => {
-  // Prevent scroll when expanded
+const ExpandedView = ({ children }) => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -26,6 +25,51 @@ const ExpandedView = ({ children, onClose }) => {
   );
 };
 
+const MetricChart = ({ 
+  data, 
+  color, 
+  unit, 
+  isHeartRate, 
+  isResistance 
+}) => (
+  <ResponsiveContainer width="100%" height="100%">
+    <LineChart
+      data={data}
+      margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+    >
+      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+      <XAxis
+        dataKey="time"
+        tick={{ fontSize: 12, fill: '#9CA3AF' }}
+        stroke="#4B5563"
+      />
+      <YAxis
+        domain={isHeartRate ? [30, 200] : isResistance ? [0, 100] : ['auto', 'auto']}
+        unit={unit}
+        tick={{ fontSize: 12, fill: '#9CA3AF' }}
+        stroke="#4B5563"
+      />
+      <Tooltip
+        contentStyle={{
+          backgroundColor: '#1F2937',
+          border: '1px solid #374151',
+          borderRadius: '0.5rem'
+        }}
+        labelStyle={{ color: '#9CA3AF' }}
+        itemStyle={{ color: '#F3F4F6' }}
+      />
+      <Line
+        type="monotone"
+        dataKey="value"
+        stroke={isHeartRate ? "#ef4444" : color}
+        strokeWidth={2}
+        dot={false}
+        isAnimationActive={false}
+      />
+    </LineChart>
+  </ResponsiveContainer>
+);
+
 const MetricCard = ({
   title,
   emoji,
@@ -41,10 +85,10 @@ const MetricCard = ({
   const latestValue = safeData.length > 0 ? (safeData[safeData.length - 1]?.value || 0) : 0;
   const heartRateInfo = isHeartRate ? getHeartRateZone(latestValue) : null;
 
-  const CardContent = (
+  const renderCard = (expanded = false) => (
     <Card className={cn(
       "bg-gray-800/50 border-gray-700 transition-all duration-300",
-      isExpanded ? "h-[80vh]" : "h-auto"
+      expanded ? "h-[80vh]" : "h-auto"
     )}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
@@ -62,10 +106,10 @@ const MetricCard = ({
             )}
           </CardTitle>
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => setIsExpanded(!expanded)}
             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
           >
-            {isExpanded ? (
+            {expanded ? (
               <Minimize2 className="w-4 h-4" />
             ) : (
               <Maximize2 className="w-4 h-4" />
@@ -90,56 +134,31 @@ const MetricCard = ({
       <CardContent>
         <div className={cn(
           "transition-all duration-300",
-          isExpanded ? "h-[calc(80vh-10rem)]" : "h-48"
+          expanded ? "h-[calc(80vh-10rem)]" : "h-48"
         )}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={safeData}
-              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis
-                dataKey="time"
-                tick={{ fontSize: 12, fill: '#9CA3AF' }}
-                stroke="#4B5563"
-              />
-              <YAxis
-                domain={isHeartRate ? [30, 200] : isResistance ? [0, 100] : ['auto', 'auto']}
-                unit={unit}
-                tick={{ fontSize: 12, fill: '#9CA3AF' }}
-                stroke="#4B5563"
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '0.5rem'
-                }}
-                labelStyle={{ color: '#9CA3AF' }}
-                itemStyle={{ color: '#F3F4F6' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={isHeartRate ? "#ef4444" : color}
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <MetricChart 
+            data={safeData}
+            color={color}
+            unit={unit}
+            isHeartRate={isHeartRate}
+            isResistance={isResistance}
+          />
         </div>
       </CardContent>
     </Card>
   );
 
-  return isExpanded ? (
-    <ExpandedView onClose={() => setIsExpanded(false)}>
-      {CardContent}
-    </ExpandedView>
-  ) : (
+  if (isExpanded) {
+    return (
+      <ExpandedView>
+        {renderCard(true)}
+      </ExpandedView>
+    );
+  }
+
+  return (
     <div className="relative group">
-      {CardContent}
+      {renderCard(false)}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-gray-900/20 rounded-lg">
         <button
           onClick={() => setIsExpanded(true)}
