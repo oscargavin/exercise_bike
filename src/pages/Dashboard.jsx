@@ -11,6 +11,7 @@ import { useMultipleBluetoothDevices } from '../hooks/useMultipleBluetoothDevice
 import { DEVICE_TYPES } from '../constants/bluetoothConstants';
 
 function Dashboard() {
+  const { user, loading: authLoading } = useAuth();
   const {
     isSessionActive,
     currentSession,
@@ -25,7 +26,22 @@ function Dashboard() {
     endSession,
   } = useSessionManager();
 
-  const { user } = useAuth();
+    // Show loading state while auth is initializing
+    if (authLoading) {
+      return <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+        <Navbar
+          isBikeConnected={false}
+          isHeartRateConnected={false}
+          deviceInfo={null}
+          isSessionActive={false}
+        />
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex justify-center">
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+          </div>
+        </main>
+      </div>;
+    }
 
   const handleBikeData = (data) => {
     const processedData = processBluetoothData(data);

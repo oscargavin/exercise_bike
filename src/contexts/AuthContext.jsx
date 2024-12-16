@@ -13,29 +13,28 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('token');
         if (token) {
           try {
-            const response = await fetch('/api/protected-test', { // Make a request to a protected endpoint
+            const response = await fetch('/api/protected-test', {
               headers: {
                 Authorization: `Bearer ${token}`,
               },
             });
-  
+    
             if (!response.ok) {
               const errorData = await response.json()
               if (errorData.code === "token_expired" || errorData.code === "token_invalid") {
-                // Token is invalid or expired, log the user out
                 logout();
                 return;
               }
               throw new Error("Token check failed")
             }
-  
+    
             const savedUser = localStorage.getItem('user');
             if (savedUser) {
               setUser(JSON.parse(savedUser));
             }
           } catch (error) {
             console.error("Authentication check error:", error);
-            logout(); // Log out on any error
+            logout();
           }
         }
         setLoading(false);

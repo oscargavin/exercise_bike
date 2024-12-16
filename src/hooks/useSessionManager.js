@@ -1,15 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-export const useSessionManager = () => {
-  const { user } = useAuth();
+const useSessionManager = () => {
+  const { user, loading: authLoading } = useAuth();
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const [previousSessions, setPreviousSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const sessionActiveRef = useRef(false);
 
   const [timeSeriesData, setTimeSeriesData] = useState(() => ({
     speed: [],
@@ -112,7 +111,7 @@ export const useSessionManager = () => {
 
   useEffect(() => {
     const fetchSessions = async () => {
-      if (!user?.token) return;
+      if (!user?.token || authLoading) return;
 
       try {
         setIsLoading(true);
@@ -137,7 +136,7 @@ export const useSessionManager = () => {
     };
 
     fetchSessions();
-  }, [user]);
+  }, [user, authLoading]);
 
   return {
     isSessionActive,
