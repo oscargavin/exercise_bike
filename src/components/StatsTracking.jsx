@@ -3,10 +3,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Sparkles, TrendingUp, ChevronRight, LightbulbIcon, X } from 'lucide-react';
 import { calculateSessionStats } from '@/utils/stats';
+import { useAuth } from '@/contexts/AuthContext';
 
 const StatsTracking = ({ sessions, userName }) => {
+  const { user, updateUser } = useAuth();
   const [showWelcome, setShowWelcome] = useState(true);
-  const [showInsights, setShowInsights] = useState(true);
+  const [showInsights, setShowInsights] = useState(user?.show_insights ?? true);
 
   const lastSessionDate = useMemo(() => {
     if (!sessions.length) return null;
@@ -74,11 +76,36 @@ const StatsTracking = ({ sessions, userName }) => {
     };
   }, [sessions]);
 
+  const handleInsightsToggle = async () => {
+    try {
+      const response = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          show_insights: !showInsights
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        updateUser({ ...user, show_insights: !showInsights });
+        setShowInsights(!showInsights);
+      }
+    } catch (error) {
+      console.error('Failed to update insights preference:', error);
+      // Still toggle the state locally even if save fails
+      setShowInsights(!showInsights);
+    }
+  };
+
   return (
     <div>
       {/* Header button remains the same */}
       <button
-        onClick={() => setShowInsights(!showInsights)}
+        onClick={handleInsightsToggle}
         className="w-full flex items-center space-x-2 mb-6 group"
       >
         <div className="flex items-center space-x-2 bg-blue-500/10 rounded-lg px-4 py-2">

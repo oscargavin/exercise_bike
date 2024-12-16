@@ -1,4 +1,3 @@
-import { useBluetoothDevice } from '../hooks/useBluetoothDevice';
 import { useSessionManager } from '../hooks/useSessionManager';
 import { processBluetoothData } from '../utils/dataProcessing';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +7,6 @@ import MetricCardSkeleton from '../components/MetricCardSkeleton';
 import SessionsListSkeleton from '../components/SessionsListSkeleton';
 import SessionsList from '../components/SessionsList';
 import StatsTracking from '@/components/StatsTracking';
-import { Loader2 } from 'lucide-react';
 import { useMultipleBluetoothDevices } from '../hooks/useMultipleBluetoothDevices';
 import { DEVICE_TYPES } from '../constants/bluetoothConstants';
 

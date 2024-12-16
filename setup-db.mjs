@@ -33,6 +33,7 @@ async function setupDatabase() {
           profile_picture TEXT,
           reset_token TEXT,
           reset_token_expiry TIMESTAMP WITH TIME ZONE,
+          show_insights BOOLEAN DEFAULT true,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
@@ -58,14 +59,35 @@ async function setupDatabase() {
         `CREATE INDEX idx_exercise_sessions_start_time ON exercise_sessions(start_time DESC)`
       );
 
-      console.log("Database setup completed successfully");
+      console.log("Initial database setup completed successfully");
     } else {
-      console.log("Tables already exist, no changes needed");
+      console.log("Tables exist, checking for required columns...");
+
+      // Check if show_insights column exists
+      const showInsightsExists = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'users' AND column_name = 'show_insights'
+        );
+      `);
+
+      if (!showInsightsExists.rows[0].exists) {
+        console.log("Adding show_insights column to users table...");
+        await client.query(`
+          ALTER TABLE users 
+          ADD COLUMN show_insights BOOLEAN DEFAULT true;
+        `);
+        console.log("Added show_insights column successfully");
+      } else {
+        console.log("show_insights column already exists");
+      }
     }
 
+    console.log("Database update completed successfully");
     process.exit(0);
   } catch (error) {
     console.error("Error setting up database:", error);
+    console.error("Error details:", error.message);
     process.exit(1);
   } finally {
     await client.end();
