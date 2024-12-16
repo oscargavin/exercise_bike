@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { getHeartRateZone } from '@/utils/stats';
 import { cn } from '@/lib/utils';
 
-const ExpandedView = ({ children }) => {
+const ExpandedView = ({ children, onClose }) => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -16,7 +16,15 @@ const ExpandedView = ({ children }) => {
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={(e) => {
+        // Only close if clicking the backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="w-full max-w-4xl animate-in fade-in zoom-in duration-300">
         {children}
       </div>
@@ -87,8 +95,10 @@ const MetricCard = ({
 
   const renderCard = (expanded = false) => (
     <Card className={cn(
-      "bg-gray-800/50 border-gray-700 transition-all duration-300",
-      expanded ? "h-[80vh]" : "h-auto"
+      "transition-all duration-300",
+      expanded 
+        ? "h-[80vh] bg-gray-800/75 border-gray-700" 
+        : "h-auto bg-gray-800/50 border-gray-700"
     )}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
@@ -150,25 +160,13 @@ const MetricCard = ({
 
   if (isExpanded) {
     return (
-      <ExpandedView>
+      <ExpandedView onClose={() => setIsExpanded(false)}>
         {renderCard(true)}
       </ExpandedView>
     );
   }
 
-  return (
-    <div className="relative group">
-      {renderCard(false)}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-gray-900/20 rounded-lg">
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="p-2 bg-gray-800/90 rounded-lg text-white transform scale-90 group-hover:scale-100 transition-all duration-200"
-        >
-          <Maximize2 className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-  );
+  return renderCard(false);
 };
 
 export default MetricCard;
