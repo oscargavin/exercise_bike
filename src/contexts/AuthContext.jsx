@@ -30,7 +30,13 @@ export const AuthProvider = ({ children }) => {
     
             const savedUser = localStorage.getItem('user');
             if (savedUser) {
-              setUser(JSON.parse(savedUser));
+              const parsedUser = JSON.parse(savedUser);
+              // Ensure all required fields exist
+              const userWithDefaults = {
+                ...parsedUser,
+                show_insights: parsedUser.show_insights ?? true,
+              };
+              setUser(userWithDefaults);
             }
           } catch (error) {
             console.error("Authentication check error:", error);
@@ -43,14 +49,16 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
   const login = (userData, token) => {
-    // Include token in the user data
+    // Make sure we store the complete user data
     const userToStore = {
       ...userData,
-      token
+      token,
+      show_insights: userData.show_insights ?? true  // Ensure this field exists with a default
     };
+    
     setUser(userToStore);
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user', JSON.stringify(userToStore));  // Store complete user data
   };
   
 
