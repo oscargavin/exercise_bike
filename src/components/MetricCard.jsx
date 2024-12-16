@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Heart, Maximize2, Minimize2, X } from 'lucide-react';
+import { Heart, Maximize2, Minimize2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { getHeartRateZone } from '@/utils/stats';
 import { cn } from '@/lib/utils';
@@ -18,9 +18,11 @@ const ExpandedView = ({ children, onClose, isClosing }) => {
   return createPortal(
     <div 
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm",
+        "fixed inset-0 z-50 flex items-center justify-center p-4",
         "transition-all duration-300 ease-in-out",
-        isClosing ? "opacity-0" : "opacity-100"
+        isClosing 
+          ? "bg-black/0 backdrop-blur-none" 
+          : "bg-black/50 backdrop-blur-sm"
       )}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -29,7 +31,7 @@ const ExpandedView = ({ children, onClose, isClosing }) => {
       }}
     >
       <div className={cn(
-        "w-full max-w-4xl transition-all duration-300 ease-in-out",
+        "w-full max-w-4xl transition-all duration-300 ease-in-out transform",
         isClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"
       )}>
         {children}
@@ -94,26 +96,43 @@ const MetricCard = ({
   isHeartRate = false,
   isResistance = false
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const safeData = Array.isArray(data) ? data : [];
-  const latestValue = safeData.length > 0 ? (safeData[safeData.length - 1]?.value || 0) : 0;
-  const heartRateInfo = isHeartRate ? getHeartRateZone(latestValue) : null;
+  const [displayState, setDisplayState] = useState('normal'); // 'normal', 'expanding', 'expanded', 'closing'
+  const [shouldRenderExpandedView, setShouldRenderExpandedView] = useState(false);
 
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsExpanded(false);
-      setIsClosing(false);
-    }, 300); // Match the duration of the transition
+  useEffect(() => {
+    let timeout;
+    if (displayState === 'expanding') {
+      setShouldRenderExpandedView(true);
+      timeout = setTimeout(() => {
+        setDisplayState('expanded');
+      }, 50); // Small delay to ensure mounting is complete
+    } else if (displayState === 'closing') {
+      timeout = setTimeout(() => {
+        setShouldRenderExpandedView(false);
+        setDisplayState('normal');
+      }, 300);
+    }
+    return () => clearTimeout(timeout);
+  }, [displayState]);
+
+  const handleExpand = () => {
+    setDisplayState('expanding');
   };
 
-  const renderCard = (expanded = false) => (
+  const handleClose = () => {
+    setDisplayState('closing');
+  };
+
+  const renderCard = (isExpandedView = false) => (
     <Card className={cn(
-      "transition-all duration-300 ease-in-out",
-      expanded 
-        ? "h-[80vh] bg-gray-800/90 border-gray-700" 
-        : "h-auto bg-gray-800/50 border-gray-700"
+      "transition-all duration-300 ease-in-out transform",
+      {
+        'h-[80vh] bg-gray-800/90 border-gray-700': isExpandedView,
+        'h-auto bg-gray-800/50 border-gray-700': !isExpandedView,
+        'scale-95 opacity-0': displayState === 'closing' && isExpandedView,
+        'scale-100 opacity-100': displayState === 'expanded' && isExpandedView,
+        'scale-95': displayState === 'expanding' && !isExpandedView,
+      }
     )}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
@@ -131,10 +150,10 @@ const MetricCard = ({
             )}
           </CardTitle>
           <button
-            onClick={() => expanded ? handleClose() : setIsExpanded(true)}
+            onClick={isExpandedView ? handleClose : handleExpand}
             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
           >
-            {expanded ? (
+            {isExpandedView ? (
               <Minimize2 className="w-4 h-4" />
             ) : (
               <Maximize2 className="w-4 h-4" />
@@ -158,8 +177,9 @@ const MetricCard = ({
       </CardHeader>
       <CardContent>
         <div className={cn(
-          "transition-all duration-300",
-          expanded ? "h-[calc(80vh-10rem)]" : "h-48"
+          "transition-all duration-300 ease-in-out",
+          isExpandedView ? "h-[calc(80vh-10rem)]" : "h-48",
+          displayState === 'closing' && isExpandedView ? "opacity-0" : "opacity-100"
         )}>
           <MetricChart 
             data={safeData}
@@ -173,15 +193,25 @@ const MetricCard = ({
     </Card>
   );
 
-  if (isExpanded) {
-    return (
-      <ExpandedView onClose={handleClose} isClosing={isClosing}>
-        {renderCard(true)}
-      </ExpandedView>
-    );
-  }
-
-  return renderCard(false);
+  return (
+    <>
+      <div className={cn(
+        "transition-all duration-300 ease-in-out",
+        shouldRenderExpandedView && "opacity-0 scale-95"
+      )}>
+        {renderCard(false)}
+      </div>
+      
+      {shouldRenderExpandedView && (
+        <ExpandedView 
+          onClose={handleClose} 
+          isClosing={displayState === 'closing'}
+        >
+          {renderCard(true)}
+        </ExpandedView>
+      )}
+    </>
+  );
 };
 
 export default MetricCard;
