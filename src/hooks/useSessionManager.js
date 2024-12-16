@@ -9,6 +9,7 @@ export const useSessionManager = () => {
   const [selectedSession, setSelectedSession] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const sessionActiveRef = useRef(false);
 
   const [timeSeriesData, setTimeSeriesData] = useState(() => ({
     speed: [],
