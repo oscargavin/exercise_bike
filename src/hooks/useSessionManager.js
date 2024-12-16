@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-const useSessionManager = () => {
+export const useSessionManager = () => {
   const { user, loading: authLoading } = useAuth();
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
@@ -109,6 +109,7 @@ const useSessionManager = () => {
     }
   };
 
+  // Load previous sessions
   useEffect(() => {
     const fetchSessions = async () => {
       if (!user?.token || authLoading) return;
@@ -136,7 +137,7 @@ const useSessionManager = () => {
     };
 
     fetchSessions();
-  }, [user, authLoading]);
+  }, [user, authLoading]); // Add authLoading to dependencies
 
   return {
     isSessionActive,
