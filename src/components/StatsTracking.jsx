@@ -76,31 +76,36 @@ const StatsTracking = ({ sessions, userName }) => {
     };
   }, [sessions]);
 
-  const handleInsightsToggle = async () => {
-    try {
-      const response = await fetch('/api/user/preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify({
-          show_insights: !showInsights
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        updateUser({ ...user, show_insights: !showInsights });
-        setShowInsights(!showInsights);
-      }
-    } catch (error) {
+  const handleInsightsToggle = () => {
+    // Update local state immediately for responsive UI
+    setShowInsights(prev => !prev);
+    
+    // Also update user context immediately
+    updateUser({
+      ...user,
+      show_insights: !showInsights
+    });
+  
+    // Send update to server in background
+    fetch('/api/user/preferences', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.token}`
+      },
+      body: JSON.stringify({
+        show_insights: !showInsights
+      }),
+    }).catch(error => {
       console.error('Failed to update insights preference:', error);
-      // Still toggle the state locally even if save fails
-      setShowInsights(!showInsights);
-    }
+      // Optionally revert the change if the server update fails
+      // setShowInsights(prev => !prev);
+      // updateUser({
+      //   ...user,
+      //   show_insights: showInsights
+      // });
+    });
   };
-
   return (
     <div>
       {/* Header button remains the same */}
