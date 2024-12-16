@@ -1,9 +1,30 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Heart } from 'lucide-react';
-import { calculateMetricStats, getHeartRateZone } from '@/utils/stats';
+import { Heart, Maximize2, Minimize2, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { getHeartRateZone } from '@/utils/stats';
+import { cn } from '@/lib/utils';
+
+const ExpandedView = ({ children, onClose }) => {
+  // Prevent scroll when expanded
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-4xl animate-in fade-in zoom-in duration-300">
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 const MetricCard = ({
   title,
@@ -15,28 +36,42 @@ const MetricCard = ({
   isHeartRate = false,
   isResistance = false
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const safeData = Array.isArray(data) ? data : [];
   const latestValue = safeData.length > 0 ? (safeData[safeData.length - 1]?.value || 0) : 0;
-  
-  const stats = useMemo(() => calculateMetricStats(safeData), [safeData]);
   const heartRateInfo = isHeartRate ? getHeartRateZone(latestValue) : null;
 
-  return (
-    <Card className="bg-gray-800/50 border-gray-700">
+  const CardContent = (
+    <Card className={cn(
+      "bg-gray-800/50 border-gray-700 transition-all duration-300",
+      isExpanded ? "h-[80vh]" : "h-auto"
+    )}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg text-white flex items-center space-x-2">
-          {isHeartRate ? (
-            <Heart className="w-5 h-5 text-red-500" />
-          ) : (
-            <span>{emoji}</span>
-          )}
-          <span>{title}</span>
-          {isLive && (
-            <Badge className="ml-2 border border-gray-700 bg-transparent">
-              Live
-            </Badge>
-          )}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg text-white flex items-center space-x-2">
+            {isHeartRate ? (
+              <Heart className="w-5 h-5 text-red-500" />
+            ) : (
+              <span>{emoji}</span>
+            )}
+            <span>{title}</span>
+            {isLive && (
+              <Badge className="ml-2 border border-gray-700 bg-transparent">
+                Live
+              </Badge>
+            )}
+          </CardTitle>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
+          >
+            {isExpanded ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+          </button>
+        </div>
         <div className="flex items-center justify-between">
           <div className="text-2xl font-bold text-white">
             {isResistance ? latestValue.toFixed(0) : latestValue.toFixed(1)}
@@ -53,7 +88,10 @@ const MetricCard = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-48">
+        <div className={cn(
+          "transition-all duration-300",
+          isExpanded ? "h-[calc(80vh-10rem)]" : "h-48"
+        )}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={safeData}
@@ -93,6 +131,24 @@ const MetricCard = ({
         </div>
       </CardContent>
     </Card>
+  );
+
+  return isExpanded ? (
+    <ExpandedView onClose={() => setIsExpanded(false)}>
+      {CardContent}
+    </ExpandedView>
+  ) : (
+    <div className="relative group">
+      {CardContent}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-gray-900/20 rounded-lg">
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="p-2 bg-gray-800/90 rounded-lg text-white transform scale-90 group-hover:scale-100 transition-all duration-200"
+        >
+          <Maximize2 className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
   );
 };
 
