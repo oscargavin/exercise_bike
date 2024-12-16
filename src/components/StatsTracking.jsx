@@ -60,6 +60,7 @@ const StatsTracking = ({ sessions, userName }) => {
   const progressIndicators = useMemo(() => {
     if (sessions.length < 2) return null;
     
+    // test
     const latestStats = calculateSessionStats(sessions[0].data);
     const previousStats = calculateSessionStats(sessions[1].data);
     
