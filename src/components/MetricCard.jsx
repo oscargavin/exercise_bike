@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { getHeartRateZone } from '@/utils/stats';
 import { cn } from '@/lib/utils';
 
-const ExpandedView = ({ children, onClose }) => {
+const ExpandedView = ({ children, onClose, isClosing }) => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -17,15 +17,21 @@ const ExpandedView = ({ children, onClose }) => {
 
   return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className={cn(
+        "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm",
+        "transition-all duration-300 ease-in-out",
+        isClosing ? "opacity-0" : "opacity-100"
+      )}
       onClick={(e) => {
-        // Only close if clicking the backdrop
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="w-full max-w-4xl animate-in fade-in zoom-in duration-300">
+      <div className={cn(
+        "w-full max-w-4xl transition-all duration-300 ease-in-out",
+        isClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"
+      )}>
         {children}
       </div>
     </div>,
@@ -89,15 +95,24 @@ const MetricCard = ({
   isResistance = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const safeData = Array.isArray(data) ? data : [];
   const latestValue = safeData.length > 0 ? (safeData[safeData.length - 1]?.value || 0) : 0;
   const heartRateInfo = isHeartRate ? getHeartRateZone(latestValue) : null;
 
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsExpanded(false);
+      setIsClosing(false);
+    }, 300); // Match the duration of the transition
+  };
+
   const renderCard = (expanded = false) => (
     <Card className={cn(
-      "transition-all duration-300",
+      "transition-all duration-300 ease-in-out",
       expanded 
-        ? "h-[80vh] bg-gray-800/75 border-gray-700" 
+        ? "h-[80vh] bg-gray-800/90 border-gray-700" 
         : "h-auto bg-gray-800/50 border-gray-700"
     )}>
       <CardHeader className="pb-2">
@@ -116,7 +131,7 @@ const MetricCard = ({
             )}
           </CardTitle>
           <button
-            onClick={() => setIsExpanded(!expanded)}
+            onClick={() => expanded ? handleClose() : setIsExpanded(true)}
             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
           >
             {expanded ? (
@@ -160,7 +175,7 @@ const MetricCard = ({
 
   if (isExpanded) {
     return (
-      <ExpandedView onClose={() => setIsExpanded(false)}>
+      <ExpandedView onClose={handleClose} isClosing={isClosing}>
         {renderCard(true)}
       </ExpandedView>
     );
