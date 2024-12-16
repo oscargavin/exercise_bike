@@ -244,7 +244,8 @@ app.get("/api/user/profile", verifyToken, async (req, res) => {
   try {
     const result = await executeQuery(() =>
       client.query(
-        "SELECT id, email, name, age, height, weight, profile_picture FROM users WHERE id = $1",
+        `SELECT id, email, name, age, height, weight, profile_picture, show_insights 
+         FROM users WHERE id = $1`,
         [req.userId]
       )
     );
