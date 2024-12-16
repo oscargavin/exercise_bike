@@ -98,6 +98,10 @@ const MetricCard = ({
 }) => {
   const [displayState, setDisplayState] = useState('normal'); // 'normal', 'expanding', 'expanded', 'closing'
   const [shouldRenderExpandedView, setShouldRenderExpandedView] = useState(false);
+  
+  const safeData = Array.isArray(data) ? data : [];
+  const latestValue = safeData.length > 0 ? (safeData[safeData.length - 1]?.value || 0) : 0;
+  const heartRateInfo = isHeartRate ? getHeartRateZone(latestValue) : null;
 
   useEffect(() => {
     let timeout;
