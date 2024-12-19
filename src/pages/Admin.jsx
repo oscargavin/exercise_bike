@@ -123,6 +123,7 @@ const Admin = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);  // Clean up the URL object
         
     } catch (err) {
         console.error('Error exporting sessions:', err);
