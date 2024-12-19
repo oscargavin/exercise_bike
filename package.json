@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "start": "node server.mjs",
-    "postbuild": "node setup-db.mjs"
+    "start": "node server.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",
