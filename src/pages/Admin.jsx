@@ -130,7 +130,7 @@ const Admin = () => {
     } finally {
         setIsLoading(false);
     }
-};
+  };
 
   // Show loading state while auth is initializing
   if (loading) {
