@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "setup-db.mjs",
+      "use": "@vercel/node"
+    },
+    {
       "src": "server.mjs",
       "use": "@vercel/node"
     },
@@ -23,5 +27,6 @@
       "dest": "/",
       "status": 200
     }
-  ]
+  ],
+  "buildCommand": "node setup-db.mjs && npm run build"
 }

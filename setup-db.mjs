@@ -84,6 +84,7 @@ async function setupDatabase() {
         CREATE TABLE exercise_sessions (
           id SERIAL PRIMARY KEY,
           user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          speed_data INTEGER[] NOT NULL,
           cadence_data INTEGER[] NOT NULL,
           resistance_data INTEGER[] NOT NULL,
           heart_rate_data INTEGER[] NOT NULL,

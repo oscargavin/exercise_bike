@@ -324,16 +324,18 @@ app.put("/api/user/preferences", verifyToken, async (req, res) => {
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
     const {
-      cadenceData, // array of measurements
-      resistanceData, // array of measurements
-      heartRateData, // array of measurements
-      exerciseTime, // in seconds
+      speedData,
+      cadenceData,
+      resistanceData,
+      heartRateData,
+      exerciseTime,
       startedAt,
     } = req.body;
 
     if (
       !exerciseTime ||
       !startedAt ||
+      !speedData ||
       !cadenceData ||
       !resistanceData ||
       !heartRateData
@@ -347,15 +349,17 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       client.query(
         `INSERT INTO exercise_sessions (
           user_id,
+          speed_data,
           cadence_data,
           resistance_data,
           heart_rate_data,
           exercise_time,
           started_at
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, cadence_data, resistance_data, heart_rate_data, exercise_time, started_at`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, speed_data, cadence_data, resistance_data, heart_rate_data, exercise_time, started_at`,
         [
           req.userId,
+          speedData, // Added this
           cadenceData,
           resistanceData,
           heartRateData,
@@ -388,7 +392,6 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
       )
     );
 
-    // Transform the data for frontend consumption
     const sessions = result.rows.map((session) => ({
       id: session.id,
       startTime: session.started_at,
@@ -396,6 +399,12 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
         new Date(session.started_at).getTime() + session.exercise_time * 1000
       ),
       data: {
+        speed: session.speed_data.map((value, index) => ({
+          time: new Date(
+            new Date(session.started_at).getTime() + index * 1000
+          ).toLocaleTimeString(),
+          value,
+        })),
         cadence: session.cadence_data.map((value, index) => ({
           time: new Date(
             new Date(session.started_at).getTime() + index * 1000

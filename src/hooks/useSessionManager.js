@@ -67,16 +67,12 @@ export const useSessionManager = () => {
     if (!currentSession) return;
 
     try {
-      // First, verify we have a token
       if (!user?.token) {
         throw new Error("Authentication required");
       }
 
-      // Log the data we're about to send for debugging
-      console.log("Current session data:", currentSession);
-      console.log("Time series data:", timeSeriesData);
-
       // Transform time series data into arrays of just values
+      const speedData = timeSeriesData.speed.map((d) => Math.round(d.value)); // Added this
       const cadenceData = timeSeriesData.cadence.map((d) =>
         Math.round(d.value)
       );
@@ -87,12 +83,12 @@ export const useSessionManager = () => {
         Math.round(d.value)
       );
 
-      // Calculate exercise time in seconds
       const exerciseTime = Math.round(
         (new Date() - new Date(currentSession.startTime)) / 1000
       );
 
       const sessionData = {
+        speedData, // Added this
         cadenceData,
         resistanceData,
         heartRateData,
@@ -100,14 +96,11 @@ export const useSessionManager = () => {
         startedAt: currentSession.startTime.toISOString(),
       };
 
-      // Log the transformed data
-      console.log("Sending session data:", sessionData);
-
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`, // Verify token is included
+          Authorization: `Bearer ${user.token}`,
         },
         body: JSON.stringify(sessionData),
       });
@@ -136,6 +129,7 @@ export const useSessionManager = () => {
       sessionActiveRef.current = false;
     }
   };
+
   // Load previous sessions
   useEffect(() => {
     const fetchSessions = async () => {
