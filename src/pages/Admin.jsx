@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { Loader2, Search, Shield, ShieldOff, Download } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import JSZip from 'jszip';
 
 const Admin = () => {
   const { user, loading } = useAuth();
