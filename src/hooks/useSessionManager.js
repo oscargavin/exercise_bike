@@ -67,9 +67,14 @@ export const useSessionManager = () => {
     if (!currentSession) return;
 
     try {
+      // First, verify we have a token
       if (!user?.token) {
         throw new Error("Authentication required");
       }
+
+      // Log the data we're about to send for debugging
+      console.log("Current session data:", currentSession);
+      console.log("Time series data:", timeSeriesData);
 
       // Transform time series data into arrays of just values
       const cadenceData = timeSeriesData.cadence.map((d) =>
@@ -95,20 +100,24 @@ export const useSessionManager = () => {
         startedAt: currentSession.startTime.toISOString(),
       };
 
+      // Log the transformed data
+      console.log("Sending session data:", sessionData);
+
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
+          Authorization: `Bearer ${user.token}`, // Verify token is included
         },
         body: JSON.stringify(sessionData),
       });
 
-      const responseData = await response.json();
-
       if (!response.ok) {
-        throw new Error(responseData.message || "Failed to save session");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to save session");
       }
+
+      const responseData = await response.json();
 
       setPreviousSessions((prev) => [
         {
@@ -127,7 +136,6 @@ export const useSessionManager = () => {
       sessionActiveRef.current = false;
     }
   };
-
   // Load previous sessions
   useEffect(() => {
     const fetchSessions = async () => {

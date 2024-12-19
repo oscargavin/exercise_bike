@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     // Keep the existing token when updating user data
     const updatedUser = {
       ...userData,
-      token: user.token
+      token: user?.token // Make sure token is preserved
     };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
