@@ -14,9 +14,8 @@ export const useSessionManager = () => {
   const [timeSeriesData, setTimeSeriesData] = useState(() => ({
     speed: [],
     cadence: [],
-    power: [],
-    heartRate: [],
     resistance: [],
+    heartRate: [],
   }));
 
   const updateMetric = useCallback((metric, value) => {
@@ -32,7 +31,7 @@ export const useSessionManager = () => {
             time: new Date().toLocaleTimeString(),
             value: Number(value) || 0,
           },
-        ].slice(-100), // Keep only last 100 data points for performance
+        ], // Keep all data points for complete data collection
       };
     });
   }, []);
@@ -44,18 +43,16 @@ export const useSessionManager = () => {
       data: {
         speed: [],
         cadence: [],
-        power: [],
-        heartRate: [],
         resistance: [],
+        heartRate: [],
       },
     };
 
     setTimeSeriesData({
       speed: [],
       cadence: [],
-      power: [],
-      heartRate: [],
       resistance: [],
+      heartRate: [],
     });
 
     setIsSessionActive(true);
@@ -66,18 +63,24 @@ export const useSessionManager = () => {
   const endSession = async () => {
     if (!currentSession) return;
 
-    // Immediately stop data collection
+    // First, immediately stop all data collection and update UI state
     setIsSessionActive(false);
     sessionActiveRef.current = false;
+    setCurrentSession(null);
+
+    // Then clear the time series data
+    setTimeSeriesData({
+      speed: [],
+      cadence: [],
+      resistance: [],
+      heartRate: [],
+    });
 
     try {
       if (!user?.token) {
         throw new Error("Authentication required");
       }
 
-      console.log("Current timeSeriesData:", timeSeriesData);
-
-      // Transform time series data into arrays of just values
       const speedData = timeSeriesData.speed.map((d) => Math.round(d.value));
       const cadenceData = timeSeriesData.cadence.map((d) =>
         Math.round(d.value)
@@ -88,13 +91,6 @@ export const useSessionManager = () => {
       const heartRateData = timeSeriesData.heartRate.map((d) =>
         Math.round(d.value)
       );
-
-      console.log("Transformed data arrays:", {
-        speedData,
-        cadenceData,
-        resistanceData,
-        heartRateData,
-      });
 
       const exerciseTime = Math.round(
         (new Date() - new Date(currentSession.startTime)) / 1000
@@ -109,8 +105,6 @@ export const useSessionManager = () => {
         startedAt: currentSession.startTime.toISOString(),
       };
 
-      console.log("Sending session data:", sessionData);
-
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: {
@@ -120,18 +114,11 @@ export const useSessionManager = () => {
         body: JSON.stringify(sessionData),
       });
 
-      console.log("Response status:", response.status);
-
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error response:", errorData);
-        throw new Error(errorData.message || "Failed to save session");
+        throw new Error("Failed to save session");
       }
 
-      const responseData = await response.json();
-      console.log("Success response:", responseData);
-
-      // Update previous sessions
+      // Update previous sessions list after successful save
       setPreviousSessions((prev) => [
         {
           ...currentSession,
@@ -142,17 +129,7 @@ export const useSessionManager = () => {
       ]);
     } catch (err) {
       console.error("Error saving session:", err);
-      console.error("Full error object:", JSON.stringify(err, null, 2));
-      setError("Failed to save session: " + (err.message || "Network error"));
-    } finally {
-      // Clean up all session-related state
-      setCurrentSession(null);
-      setTimeSeriesData({
-        speed: [],
-        cadence: [],
-        heartRate: [],
-        resistance: [],
-      });
+      setError("Failed to save session: " + err.message);
     }
   };
 
@@ -184,7 +161,7 @@ export const useSessionManager = () => {
     };
 
     fetchSessions();
-  }, [user, authLoading]); // Add authLoading to dependencies
+  }, [user, authLoading]);
 
   return {
     isSessionActive,
