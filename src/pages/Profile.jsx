@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ExportDataButton from '../components/ExportDataButton';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Camera, Save, ArrowLeft } from 'lucide-react';
@@ -170,6 +171,64 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
     }
   };
 
+  const handleExportSessions = async () => {
+    try {
+        setIsLoading(true);
+        const response = await fetch('/api/admin/sessions/export', {
+            headers: {
+                'Authorization': `Bearer ${user.token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch session data');
+        }
+        
+        const data = await response.json();
+        
+        // Create sessions metadata CSV
+        let sessionsContent = 'session_id,user_id,user_email,user_name,started_at,exercise_time\n';
+        
+        // Create time series CSV
+        let timeseriesContent = 'session_id,timestamp,speed,cadence,resistance,heart_rate\n';
+        
+        // Process each session
+        data.sessions.forEach(session => {
+            // Add session metadata row
+            sessionsContent += `${session.session_id},${session.user_id},${session.user_email},"${session.user_name}",${session.started_at},${session.exercise_time}\n`;
+            
+            // Add time series rows
+            for (let i = 0; i < session.timestamps.length; i++) {
+                timeseriesContent += `${session.session_id},${session.timestamps[i]},${session.speed_data[i]},${session.cadence_data[i]},${session.resistance_data[i]},${session.heart_rate_data[i]}\n`;
+            }
+        });
+        
+        // Create and download both files in a zip
+        const zip = new JSZip();
+        
+        // Add files to zip
+        zip.file('sessions.csv', sessionsContent);
+        zip.file('timeseries.csv', timeseriesContent);
+        
+        // Generate and download zip
+        const zipContent = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(zipContent);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `exercise_data_${new Date().toISOString().split('T')[0]}.zip`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);  // Clean up the URL object
+        
+    } catch (err) {
+        console.error('Error exporting sessions:', err);
+        setError('Failed to export session data');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-[#1a1f2e] py-12 px-4 sm:px-6 lg:px-8">
@@ -288,8 +347,8 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
                   </div>
                 </div>
               </div>
-
-              <div className="flex justify-end">
+              <div className="flex justify-end space-x-4">
+                <ExportDataButton token={user?.token} />
                 <button
                   type="submit"
                   disabled={!isDirty || isLoading}

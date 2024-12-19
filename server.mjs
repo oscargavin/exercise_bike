@@ -293,6 +293,50 @@ app.put("/api/user/profile", verifyToken, async (req, res) => {
   }
 });
 
+// User's sessions export endpoint
+app.get("/api/user/sessions/export", verifyToken, async (req, res) => {
+  try {
+    // Get sessions for the current user only
+    const sessionsResult = await executeQuery(() =>
+      client.query(
+        `
+        SELECT 
+          exercise_sessions.id as session_id,
+          exercise_sessions.started_at,
+          exercise_sessions.exercise_time,
+          exercise_sessions.speed_data,
+          exercise_sessions.cadence_data,
+          exercise_sessions.resistance_data,
+          exercise_sessions.heart_rate_data
+        FROM exercise_sessions
+        WHERE user_id = $1
+        ORDER BY started_at DESC
+      `,
+        [req.userId]
+      )
+    );
+
+    // Transform the data in the same format as the admin export
+    const sessions = sessionsResult.rows.map((session) => ({
+      session_id: session.session_id,
+      started_at: new Date(session.started_at).toISOString(),
+      exercise_time: session.exercise_time,
+      timestamps: Array.from({ length: session.speed_data.length }, (_, i) =>
+        new Date(session.started_at.getTime() + i * 1000).toISOString()
+      ),
+      speed_data: session.speed_data,
+      cadence_data: session.cadence_data,
+      resistance_data: session.resistance_data,
+      heart_rate_data: session.heart_rate_data,
+    }));
+
+    res.json({ sessions });
+  } catch (error) {
+    console.error("Error exporting sessions:", error);
+    res.status(500).json({ message: "Error exporting sessions" });
+  }
+});
+
 // Update user preferences endpoint
 app.put("/api/user/preferences", verifyToken, async (req, res) => {
   try {
