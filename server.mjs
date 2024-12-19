@@ -195,6 +195,7 @@ app.post("/api/auth/login", async (req, res) => {
       height: user.height,
       weight: user.weight,
       profile_picture: user.profile_picture,
+      admin: user.admin,
     };
 
     res.json({
@@ -244,7 +245,7 @@ app.get("/api/user/profile", verifyToken, async (req, res) => {
   try {
     const result = await executeQuery(() =>
       client.query(
-        `SELECT id, email, name, age, height, weight, profile_picture, show_insights 
+        `SELECT id, email, name, age, height, weight, profile_picture, show_insights, admin 
          FROM users WHERE id = $1`,
         [req.userId]
       )
@@ -589,42 +590,8 @@ async function testDbConnection() {
   }
 }
 
-// Add this after your other imports and before any routes
-async function ensureDbSetup() {
-  try {
-    console.log("Checking database schema...");
-
-    // Check if admin column exists
-    const adminColumnExists = await executeQuery(() =>
-      client.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_name = 'users' AND column_name = 'admin'
-        );
-      `)
-    );
-
-    if (!adminColumnExists.rows[0].exists) {
-      console.log("Adding admin column to users table...");
-      await executeQuery(() =>
-        client.query(`
-          ALTER TABLE users
-          ADD COLUMN IF NOT EXISTS admin BOOLEAN DEFAULT false;
-        `)
-      );
-      console.log("Admin column added successfully");
-    } else {
-      console.log("Admin column already exists");
-    }
-  } catch (error) {
-    console.error("Database setup error:", error);
-    throw error;
-  }
-}
-
 async function startServer() {
   const dbConnected = await testDbConnection();
-  await ensureDbSetup();
 
   if (!dbConnected) {
     console.error("Cannot start server without database connection");

@@ -31,10 +31,10 @@ export const AuthProvider = ({ children }) => {
             const savedUser = localStorage.getItem('user');
             if (savedUser) {
               const parsedUser = JSON.parse(savedUser);
-              // Ensure all required fields exist
               const userWithDefaults = {
                 ...parsedUser,
                 show_insights: parsedUser.show_insights ?? true,
+                admin: parsedUser.admin ?? false  // Add this line
               };
               setUser(userWithDefaults);
             }
@@ -48,18 +48,18 @@ export const AuthProvider = ({ children }) => {
       checkAuthStatus();
     }, []);
 
-  const login = (userData, token) => {
-    // Make sure we store the complete user data
-    const userToStore = {
-      ...userData,
-      token,
-      show_insights: userData.show_insights ?? true  // Ensure this field exists with a default
+    const login = (userData, token) => {
+      const userToStore = {
+        ...userData,
+        token,
+        show_insights: userData.show_insights ?? true,
+        admin: userData.admin ?? false
+      };
+      
+      setUser(userToStore);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userToStore));
     };
-    
-    setUser(userToStore);
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userToStore));  // Store complete user data
-  };
   
 
   const updateUser = (userData) => {
