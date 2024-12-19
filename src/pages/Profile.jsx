@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ExportDataButton from '../components/ExportDataButton';
+import ExportDataButton from '../components/ExportData';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Camera, Save, ArrowLeft } from 'lucide-react';
