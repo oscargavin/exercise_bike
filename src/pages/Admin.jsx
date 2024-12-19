@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { Loader2, Search, Shield, ShieldOff } from 'lucide-react';
+import { Loader2, Search, Shield, ShieldOff, Download } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const Admin = () => {
@@ -75,6 +75,68 @@ const Admin = () => {
     }
   };
 
+  const handleExportSessions = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/admin/sessions/export', {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch session data');
+      }
+
+      const data = await response.json();
+      
+      // Create CSV content
+      let csvContent = '';
+      
+      // Process each session
+      data.sessions.forEach(session => {
+        // Add session metadata
+        csvContent += `\nSession ID,${session.session_id}\n`;
+        csvContent += `User Email,${session.user_email}\n`;
+        csvContent += `User Name,"${session.user_name}"\n`;
+        csvContent += `Start Time,${session.started_at}\n`;
+        csvContent += `Exercise Time (seconds),${session.exercise_time}\n\n`;
+        
+        // Add time series data headers
+        csvContent += 'Timestamp,Speed (km/h),Cadence (rpm),Resistance (%),Heart Rate (bpm)\n';
+        
+        // Add time series data rows
+        for (let i = 0; i < session.timestamps.length; i++) {
+          csvContent += [
+            session.timestamps[i],
+            session.speed_data[i],
+            session.cadence_data[i],
+            session.resistance_data[i],
+            session.heart_rate_data[i]
+          ].join(',') + '\n';
+        }
+        
+        // Add separator between sessions
+        csvContent += '\n\n';
+      });
+      
+      // Create and download the CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `exercise_sessions_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error exporting sessions:', err);
+      setError('Failed to export session data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Show loading state while auth is initializing
   if (loading) {
     return <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
@@ -101,7 +163,23 @@ const Admin = () => {
         <Card className="bg-gray-800/50 border-gray-700">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span className="text-lg text-white">User Management</span>
+              <div className="flex items-center space-x-4">
+                <span className="text-lg text-white">User Management</span>
+                <button
+                  onClick={handleExportSessions}
+                  disabled={isLoading}
+                  className={`flex items-center px-3 py-1 text-sm bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {isLoading ? 'Exporting...' : 'Export Sessions'}
+                </button>
+              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -109,7 +187,7 @@ const Admin = () => {
                   placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-9 pr-4 py-2 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </CardTitle>

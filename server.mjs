@@ -593,6 +593,60 @@ app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Add this new endpoint after the other admin routes
+app.get(
+  "/api/admin/sessions/export",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const result = await executeQuery(() =>
+        client.query(
+          `SELECT 
+          exercise_sessions.*,
+          users.email as user_email,
+          users.name as user_name
+         FROM exercise_sessions 
+         JOIN users ON exercise_sessions.user_id = users.id
+         ORDER BY started_at DESC`
+        )
+      );
+
+      // Transform the data for CSV export
+      const sessions = result.rows.map((session) => {
+        const startTime = new Date(session.started_at);
+
+        // Create timestamps array based on exercise_time
+        const timestamps = Array.from(
+          { length: session.speed_data.length },
+          (_, i) => {
+            const timestamp = new Date(startTime.getTime() + i * 1000);
+            return timestamp.toISOString();
+          }
+        );
+
+        return {
+          user_email: session.user_email,
+          user_name: session.user_name,
+          session_id: session.id,
+          started_at: startTime.toISOString(),
+          exercise_time: session.exercise_time,
+          timestamps,
+          speed_data: session.speed_data,
+          cadence_data: session.cadence_data,
+          resistance_data: session.resistance_data,
+          heart_rate_data: session.heart_rate_data,
+        };
+      });
+
+      res.json({ sessions });
+    } catch (error) {
+      console.error("Error exporting sessions:", error);
+      res.status(500).json({ message: "Error exporting sessions" });
+    }
+  }
+);
+
 // Toggle user admin status (admin only)
 app.put(
   "/api/admin/users/:userId/toggle-admin",
@@ -653,34 +707,8 @@ async function testDbConnection() {
   }
 }
 
-// Add this to your server startup code
-async function verifyDatabase() {
-  try {
-    const tableCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'exercise_sessions'
-      );
-    `);
-
-    if (tableCheck.rows[0].exists) {
-      const columns = await client.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name = 'exercise_sessions';
-      `);
-      console.log("exercise_sessions table structure:", columns.rows);
-    } else {
-      console.error("exercise_sessions table does not exist!");
-    }
-  } catch (err) {
-    console.error("Database verification error:", err);
-  }
-}
-
 async function startServer() {
   const dbConnected = await testDbConnection();
-  verifyDatabase();
 
   if (!dbConnected) {
     console.error("Cannot start server without database connection");
