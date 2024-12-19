@@ -493,6 +493,75 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 
+// Middleware to check if user is admin
+const isAdmin = async (req, res, next) => {
+  try {
+    const result = await executeQuery(() =>
+      client.query("SELECT admin FROM users WHERE id = $1", [req.userId])
+    );
+
+    if (!result.rows[0]?.admin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Admin check error:", error);
+    res.status(500).json({ message: "Error checking admin status" });
+  }
+};
+
+// Get all users (admin only)
+app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const result = await executeQuery(() =>
+      client.query(
+        `SELECT id, email, name, profile_picture, admin, created_at 
+         FROM users 
+         ORDER BY created_at DESC`
+      )
+    );
+
+    res.json({ users: result.rows });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Error fetching users" });
+  }
+});
+
+// Toggle user admin status (admin only)
+app.put(
+  "/api/admin/users/:userId/toggle-admin",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { admin } = req.body;
+
+      const result = await executeQuery(() =>
+        client.query(
+          `UPDATE users 
+         SET admin = $1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2
+         RETURNING id, email, name, admin`,
+          [admin, userId]
+        )
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Error updating user" });
+    }
+  }
+);
+
 // Test routes
 app.get("/api/healthcheck", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
