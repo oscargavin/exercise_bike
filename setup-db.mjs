@@ -34,6 +34,7 @@ async function setupDatabase() {
           reset_token TEXT,
           reset_token_expiry TIMESTAMP WITH TIME ZONE,
           show_insights BOOLEAN DEFAULT true,
+          admin BOOLEAN DEFAULT false,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
@@ -44,9 +45,11 @@ async function setupDatabase() {
         CREATE TABLE exercise_sessions (
           id SERIAL PRIMARY KEY,
           user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-          start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-          end_time TIMESTAMP WITH TIME ZONE NOT NULL,
-          metrics_data JSONB NOT NULL,
+          cadence_data INTEGER[] NOT NULL,
+          resistance_data INTEGER[] NOT NULL,
+          heart_rate_data INTEGER[] NOT NULL,
+          exercise_time INTEGER NOT NULL,
+          started_at TIMESTAMP WITH TIME ZONE NOT NULL,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
@@ -56,31 +59,49 @@ async function setupDatabase() {
         `CREATE INDEX idx_exercise_sessions_user_id ON exercise_sessions(user_id)`
       );
       await client.query(
-        `CREATE INDEX idx_exercise_sessions_start_time ON exercise_sessions(start_time DESC)`
+        `CREATE INDEX idx_exercise_sessions_started_at ON exercise_sessions(started_at DESC)`
       );
 
       console.log("Initial database setup completed successfully");
     } else {
       console.log("Tables exist, checking for required columns...");
 
-      // Check if show_insights column exists
-      const showInsightsExists = await client.query(`
+      // Check if exercise_sessions table has the new structure
+      const sessionTableExists = await client.query(`
         SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_name = 'users' AND column_name = 'show_insights'
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'exercise_sessions'
         );
       `);
 
-      if (!showInsightsExists.rows[0].exists) {
-        console.log("Adding show_insights column to users table...");
-        await client.query(`
-          ALTER TABLE users 
-          ADD COLUMN show_insights BOOLEAN DEFAULT true;
-        `);
-        console.log("Added show_insights column successfully");
-      } else {
-        console.log("show_insights column already exists");
+      if (sessionTableExists.rows[0].exists) {
+        console.log("Dropping old exercise_sessions table...");
+        await client.query(`DROP TABLE exercise_sessions CASCADE;`);
       }
+
+      console.log("Creating new exercise_sessions table...");
+      await client.query(`
+        CREATE TABLE exercise_sessions (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          cadence_data INTEGER[] NOT NULL,
+          resistance_data INTEGER[] NOT NULL,
+          heart_rate_data INTEGER[] NOT NULL,
+          exercise_time INTEGER NOT NULL,
+          started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await client.query(
+        `CREATE INDEX idx_exercise_sessions_user_id ON exercise_sessions(user_id)`
+      );
+      await client.query(
+        `CREATE INDEX idx_exercise_sessions_started_at ON exercise_sessions(started_at DESC)`
+      );
+
+      console.log("Exercise sessions table updated successfully");
     }
 
     console.log("Database update completed successfully");
