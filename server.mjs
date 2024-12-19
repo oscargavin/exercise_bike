@@ -593,53 +593,79 @@ app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-// Add this new endpoint after the other admin routes
 app.get(
   "/api/admin/sessions/export",
   verifyToken,
   isAdmin,
   async (req, res) => {
     try {
-      const result = await executeQuery(() =>
-        client.query(
-          `SELECT 
-          exercise_sessions.*,
-          users.email as user_email,
-          users.name as user_name
-         FROM exercise_sessions 
-         JOIN users ON exercise_sessions.user_id = users.id
-         ORDER BY started_at DESC`
-        )
+      // Get sessions with user info
+      const sessionsResult = await executeQuery(() =>
+        client.query(`
+              SELECT 
+                  exercise_sessions.id as session_id,
+                  exercise_sessions.user_id,
+                  exercise_sessions.started_at,
+                  exercise_sessions.exercise_time,
+                  users.email as user_email,
+                  users.name as user_name,
+                  exercise_sessions.speed_data,
+                  exercise_sessions.cadence_data,
+                  exercise_sessions.resistance_data,
+                  exercise_sessions.heart_rate_data
+              FROM exercise_sessions
+              JOIN users ON exercise_sessions.user_id = users.id
+              ORDER BY started_at DESC
+          `)
       );
 
-      // Transform the data for CSV export
-      const sessions = result.rows.map((session) => {
+      // Transform the data for both CSVs
+      const sessions = sessionsResult.rows.map((session) => {
         const startTime = new Date(session.started_at);
 
-        // Create timestamps array based on exercise_time
-        const timestamps = Array.from(
+        // Create time series data
+        const timeSeriesData = Array.from(
           { length: session.speed_data.length },
           (_, i) => {
             const timestamp = new Date(startTime.getTime() + i * 1000);
-            return timestamp.toISOString();
+            return {
+              session_id: session.session_id,
+              timestamp: timestamp.toISOString(),
+              speed: session.speed_data[i],
+              cadence: session.cadence_data[i],
+              resistance: session.resistance_data[i],
+              heart_rate: session.heart_rate_data[i],
+            };
           }
         );
 
-        return {
+        // Create session metadata
+        const sessionMetadata = {
+          session_id: session.session_id,
+          user_id: session.user_id,
           user_email: session.user_email,
           user_name: session.user_name,
-          session_id: session.id,
           started_at: startTime.toISOString(),
           exercise_time: session.exercise_time,
-          timestamps,
-          speed_data: session.speed_data,
-          cadence_data: session.cadence_data,
-          resistance_data: session.resistance_data,
-          heart_rate_data: session.heart_rate_data,
+        };
+
+        return {
+          metadata: sessionMetadata,
+          timeseries: timeSeriesData,
         };
       });
 
-      res.json({ sessions });
+      // Structure the response to match our new export format
+      res.json({
+        sessions: sessions.map((s) => ({
+          ...s.metadata,
+          timestamps: s.timeseries.map((t) => t.timestamp),
+          speed_data: s.timeseries.map((t) => t.speed),
+          cadence_data: s.timeseries.map((t) => t.cadence),
+          resistance_data: s.timeseries.map((t) => t.resistance),
+          heart_rate_data: s.timeseries.map((t) => t.heart_rate),
+        })),
+      });
     } catch (error) {
       console.error("Error exporting sessions:", error);
       res.status(500).json({ message: "Error exporting sessions" });
