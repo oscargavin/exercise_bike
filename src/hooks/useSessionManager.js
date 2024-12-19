@@ -71,8 +71,10 @@ export const useSessionManager = () => {
         throw new Error("Authentication required");
       }
 
+      console.log("Current timeSeriesData:", timeSeriesData); // Debug log
+
       // Transform time series data into arrays of just values
-      const speedData = timeSeriesData.speed.map((d) => Math.round(d.value)); // Added this
+      const speedData = timeSeriesData.speed.map((d) => Math.round(d.value));
       const cadenceData = timeSeriesData.cadence.map((d) =>
         Math.round(d.value)
       );
@@ -83,18 +85,28 @@ export const useSessionManager = () => {
         Math.round(d.value)
       );
 
+      console.log("Transformed data arrays:", {
+        // Debug log
+        speedData,
+        cadenceData,
+        resistanceData,
+        heartRateData,
+      });
+
       const exerciseTime = Math.round(
         (new Date() - new Date(currentSession.startTime)) / 1000
       );
 
       const sessionData = {
-        speedData, // Added this
+        speedData,
         cadenceData,
         resistanceData,
         heartRateData,
         exerciseTime,
         startedAt: currentSession.startTime.toISOString(),
       };
+
+      console.log("Sending session data:", sessionData); // Debug log
 
       const response = await fetch("/api/sessions", {
         method: "POST",
@@ -105,12 +117,16 @@ export const useSessionManager = () => {
         body: JSON.stringify(sessionData),
       });
 
+      console.log("Response status:", response.status); // Debug log
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Error response:", errorData); // Debug log
         throw new Error(errorData.message || "Failed to save session");
       }
 
       const responseData = await response.json();
+      console.log("Success response:", responseData); // Debug log
 
       setPreviousSessions((prev) => [
         {
@@ -122,11 +138,7 @@ export const useSessionManager = () => {
       ]);
     } catch (err) {
       console.error("Error saving session:", err);
-      setError("Failed to save session: " + (err.message || "Network error"));
-    } finally {
-      setIsSessionActive(false);
-      setCurrentSession(null);
-      sessionActiveRef.current = false;
+      console.error("Full error object:", JSON.stringify(err, null, 2)); // Debug log
     }
   };
 

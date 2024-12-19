@@ -322,6 +322,7 @@ app.put("/api/user/preferences", verifyToken, async (req, res) => {
 
 // Replace the existing session routes with these
 app.post("/api/sessions", verifyToken, async (req, res) => {
+  console.log("Received session data request"); // Debug log
   try {
     const {
       speedData,
@@ -332,6 +333,18 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       startedAt,
     } = req.body;
 
+    console.log("Received data:", {
+      // Debug log
+      dataLengths: {
+        speed: speedData?.length,
+        cadence: cadenceData?.length,
+        resistance: resistanceData?.length,
+        heartRate: heartRateData?.length,
+      },
+      exerciseTime,
+      startedAt,
+    });
+
     if (
       !exerciseTime ||
       !startedAt ||
@@ -340,10 +353,21 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       !resistanceData ||
       !heartRateData
     ) {
+      console.log("Missing required fields:", {
+        // Debug log
+        hasExerciseTime: !!exerciseTime,
+        hasStartedAt: !!startedAt,
+        hasSpeedData: !!speedData,
+        hasCadenceData: !!cadenceData,
+        hasResistanceData: !!resistanceData,
+        hasHeartRateData: !!heartRateData,
+      });
       return res.status(400).json({
         message: "Missing required fields",
       });
     }
+
+    console.log("Inserting into database with user_id:", req.userId); // Debug log
 
     const result = await executeQuery(() =>
       client.query(
@@ -356,10 +380,10 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
           exercise_time,
           started_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, speed_data, cadence_data, resistance_data, heart_rate_data, exercise_time, started_at`,
+        RETURNING *`,
         [
           req.userId,
-          speedData, // Added this
+          speedData,
           cadenceData,
           resistanceData,
           heartRateData,
@@ -369,15 +393,23 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
       )
     );
 
+    console.log("Database insert successful, returned row:", result.rows[0]); // Debug log
+
     res.status(201).json({
       message: "Session saved successfully",
       session: result.rows[0],
     });
   } catch (error) {
-    console.error("Error saving session:", error);
+    console.error("Server error saving session:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     res.status(500).json({
       message: "Error saving session",
       error: error.message,
+      details: error.code,
     });
   }
 });
@@ -621,8 +653,34 @@ async function testDbConnection() {
   }
 }
 
+// Add this to your server startup code
+async function verifyDatabase() {
+  try {
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'exercise_sessions'
+      );
+    `);
+
+    if (tableCheck.rows[0].exists) {
+      const columns = await client.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'exercise_sessions';
+      `);
+      console.log("exercise_sessions table structure:", columns.rows);
+    } else {
+      console.error("exercise_sessions table does not exist!");
+    }
+  } catch (err) {
+    console.error("Database verification error:", err);
+  }
+}
+
 async function startServer() {
   const dbConnected = await testDbConnection();
+  verifyDatabase();
 
   if (!dbConnected) {
     console.error("Cannot start server without database connection");
