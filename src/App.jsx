@@ -5,24 +5,26 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import SignUp from './pages/SignUp';
 import Profile from './pages/Profile';
+import Admin from './pages/Admin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 
 // Protected Route component
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    console.log("ProtectedRoute: Loading...");
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    console.log("ProtectedRoute: User not authenticated, redirecting to /login");
     return <Navigate to="/login" />;
   }
 
-  console.log("ProtectedRoute: User authenticated, rendering child components");
+  if (requireAdmin && !user.admin) {
+    return <Navigate to="/dashboard" />;
+  }
+
   return children;
 };
 
@@ -48,6 +50,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <Admin />
               </ProtectedRoute>
             }
           />

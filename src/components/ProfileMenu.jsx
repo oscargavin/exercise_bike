@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, Shield } from 'lucide-react';
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +16,11 @@ const ProfileMenu = () => {
   const navigateToProfile = () => {
     setIsOpen(false);
     navigate('/profile');
+  };
+
+  const navigateToAdmin = () => {
+    setIsOpen(false);
+    navigate('/admin');
   };
 
   return (
@@ -53,6 +58,15 @@ const ProfileMenu = () => {
               <Settings className="w-4 h-4 mr-2" />
               Profile Settings
             </button>
+            {user?.admin && (
+              <button
+                onClick={navigateToAdmin}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Admin Settings
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-700 hover:text-red-300"
