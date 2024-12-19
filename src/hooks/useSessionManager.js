@@ -71,10 +71,28 @@ export const useSessionManager = () => {
         throw new Error("Authentication required");
       }
 
+      // Transform time series data into arrays of just values
+      const cadenceData = timeSeriesData.cadence.map((d) =>
+        Math.round(d.value)
+      );
+      const resistanceData = timeSeriesData.resistance.map((d) =>
+        Math.round(d.value)
+      );
+      const heartRateData = timeSeriesData.heartRate.map((d) =>
+        Math.round(d.value)
+      );
+
+      // Calculate exercise time in seconds
+      const exerciseTime = Math.round(
+        (new Date() - new Date(currentSession.startTime)) / 1000
+      );
+
       const sessionData = {
-        startTime: currentSession.startTime.toISOString(),
-        endTime: new Date().toISOString(),
-        metricsData: timeSeriesData,
+        cadenceData,
+        resistanceData,
+        heartRateData,
+        exerciseTime,
+        startedAt: currentSession.startTime.toISOString(),
       };
 
       const response = await fetch("/api/sessions", {

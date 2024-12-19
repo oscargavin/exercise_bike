@@ -320,35 +320,49 @@ app.put("/api/user/preferences", verifyToken, async (req, res) => {
   }
 });
 
-// Session routes
+// Replace the existing session routes with these
 app.post("/api/sessions", verifyToken, async (req, res) => {
   try {
-    const { startTime, endTime, metricsData } = req.body;
+    const {
+      cadenceData, // array of measurements
+      resistanceData, // array of measurements
+      heartRateData, // array of measurements
+      exerciseTime, // in seconds
+      startedAt,
+    } = req.body;
 
-    if (!startTime || !endTime || !metricsData) {
+    if (
+      !exerciseTime ||
+      !startedAt ||
+      !cadenceData ||
+      !resistanceData ||
+      !heartRateData
+    ) {
       return res.status(400).json({
         message: "Missing required fields",
       });
     }
 
-    const insertQuery = `
-      INSERT INTO exercise_sessions (
-        user_id,
-        start_time,
-        end_time,
-        metrics_data
-      )
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, start_time, end_time, metrics_data
-    `;
-
     const result = await executeQuery(() =>
-      client.query(insertQuery, [
-        req.userId,
-        new Date(startTime),
-        new Date(endTime),
-        metricsData,
-      ])
+      client.query(
+        `INSERT INTO exercise_sessions (
+          user_id,
+          cadence_data,
+          resistance_data,
+          heart_rate_data,
+          exercise_time,
+          started_at
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, cadence_data, resistance_data, heart_rate_data, exercise_time, started_at`,
+        [
+          req.userId,
+          cadenceData,
+          resistanceData,
+          heartRateData,
+          exerciseTime,
+          new Date(startedAt),
+        ]
+      )
     );
 
     res.status(201).json({
@@ -364,38 +378,46 @@ app.post("/api/sessions", verifyToken, async (req, res) => {
   }
 });
 
+// In your GET /api/sessions endpoint handler
 app.get("/api/sessions", verifyToken, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-
     const result = await executeQuery(() =>
       client.query(
-        `SELECT id, start_time, end_time, metrics_data
-         FROM exercise_sessions
-         WHERE user_id = $1
-         ORDER BY start_time DESC
-         LIMIT $2 OFFSET $3`,
-        [req.userId, limit, offset]
+        `SELECT * FROM exercise_sessions WHERE user_id = $1 ORDER BY started_at DESC`,
+        [req.userId]
       )
     );
 
+    // Transform the data for frontend consumption
     const sessions = result.rows.map((session) => ({
       id: session.id,
-      startTime: session.start_time,
-      endTime: session.end_time,
-      data: session.metrics_data,
+      startTime: session.started_at,
+      endTime: new Date(
+        new Date(session.started_at).getTime() + session.exercise_time * 1000
+      ),
+      data: {
+        cadence: session.cadence_data.map((value, index) => ({
+          time: new Date(
+            new Date(session.started_at).getTime() + index * 1000
+          ).toLocaleTimeString(),
+          value,
+        })),
+        resistance: session.resistance_data.map((value, index) => ({
+          time: new Date(
+            new Date(session.started_at).getTime() + index * 1000
+          ).toLocaleTimeString(),
+          value,
+        })),
+        heartRate: session.heart_rate_data.map((value, index) => ({
+          time: new Date(
+            new Date(session.started_at).getTime() + index * 1000
+          ).toLocaleTimeString(),
+          value,
+        })),
+      },
     }));
 
-    res.json({
-      sessions,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(result.rows.length / limit),
-        hasMore: result.rows.length === limit,
-      },
-    });
+    res.json({ sessions });
   } catch (error) {
     console.error("Error fetching sessions:", error);
     res.status(500).json({ message: "Error fetching sessions" });
