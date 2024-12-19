@@ -231,30 +231,30 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
 
 
   return (
-    <div className="min-h-screen bg-[#1a1f2e] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#1a1f2e] py-6 sm:py-12 px-3 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <button
           onClick={() => navigate('/dashboard')}
-          className="mb-6 flex items-center text-gray-400 hover:text-white transition-colors"
+          className="mb-4 sm:mb-6 flex items-center text-gray-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
+          <span className="text-sm sm:text-base">Back to Dashboard</span>
         </button>
         
-        <div className="bg-[#1f2937]/90 rounded-3xl shadow-xl border border-gray-800 overflow-hidden">
-          <div className="px-8 py-6">
-            <h2 className="text-2xl font-semibold text-white mb-6">Profile Settings</h2>
+        <div className="bg-[#1f2937]/90 rounded-2xl sm:rounded-3xl shadow-xl border border-gray-800 overflow-hidden">
+          <div className="px-4 sm:px-8 py-4 sm:py-6">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-4 sm:mb-6">Profile Settings</h2>
 
             {error && (
-              <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
+              <div className="mb-4 sm:mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
                 {error}
               </div>
             )}
 
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-6 sm:mb-8">
               <div className="relative">
-                <div className="w-32 h-32 rounded-full border-4 border-gray-700 overflow-hidden">
-                  {(selectedImage) ? (
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-gray-700 overflow-hidden">
+                  {selectedImage ? (
                     <img
                       src={selectedImage}
                       alt="Profile"
@@ -262,7 +262,7 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-gray-500" />
+                      <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-gray-500" />
                     </div>
                   )}
                 </div>
@@ -278,10 +278,10 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 gap-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
                     Name
                   </label>
                   <input
@@ -289,12 +289,12 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
                     Email
                   </label>
                   <input
@@ -302,13 +302,13 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
                       Age
                     </label>
                     <input
@@ -316,12 +316,12 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
                       name="age"
                       value={formData.age}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-2 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
                       Height (cm)
                     </label>
                     <input
@@ -329,12 +329,12 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
                       name="height"
                       value={formData.height}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-2 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
                       Weight (kg)
                     </label>
                     <input
@@ -342,17 +342,18 @@ const compressImage = async (base64String, maxSizeMB = 1) => {
                       name="weight"
                       value={formData.weight}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-2 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end space-x-4">
+
+              <div className="grid grid-cols-2 gap-3 pt-2 sm:pt-4">
                 <ExportDataButton token={user?.token} />
                 <button
                   type="submit"
                   disabled={!isDirty || isLoading}
-                  className={`flex items-center px-6 py-2 font-medium rounded-xl transition-all duration-200 ${
+                  className={`flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 font-medium rounded-xl text-sm sm:text-base transition-all duration-200 ${
                     !isDirty
                       ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                       : 'bg-blue-500 hover:bg-blue-600 text-white'

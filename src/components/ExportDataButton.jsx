@@ -66,7 +66,7 @@ const ExportDataButton = ({ token }) => {
     <button
       onClick={handleExport}
       disabled={isLoading}
-      className="flex items-center px-6 py-2 font-medium rounded-xl transition-all duration-200 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+      className="flex items-center justify-center w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base font-medium rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {isLoading ? (
         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
