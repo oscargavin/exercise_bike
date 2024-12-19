@@ -66,12 +66,16 @@ export const useSessionManager = () => {
   const endSession = async () => {
     if (!currentSession) return;
 
+    // Immediately stop data collection
+    setIsSessionActive(false);
+    sessionActiveRef.current = false;
+
     try {
       if (!user?.token) {
         throw new Error("Authentication required");
       }
 
-      console.log("Current timeSeriesData:", timeSeriesData); // Debug log
+      console.log("Current timeSeriesData:", timeSeriesData);
 
       // Transform time series data into arrays of just values
       const speedData = timeSeriesData.speed.map((d) => Math.round(d.value));
@@ -86,7 +90,6 @@ export const useSessionManager = () => {
       );
 
       console.log("Transformed data arrays:", {
-        // Debug log
         speedData,
         cadenceData,
         resistanceData,
@@ -106,7 +109,7 @@ export const useSessionManager = () => {
         startedAt: currentSession.startTime.toISOString(),
       };
 
-      console.log("Sending session data:", sessionData); // Debug log
+      console.log("Sending session data:", sessionData);
 
       const response = await fetch("/api/sessions", {
         method: "POST",
@@ -117,17 +120,18 @@ export const useSessionManager = () => {
         body: JSON.stringify(sessionData),
       });
 
-      console.log("Response status:", response.status); // Debug log
+      console.log("Response status:", response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error response:", errorData); // Debug log
+        console.error("Error response:", errorData);
         throw new Error(errorData.message || "Failed to save session");
       }
 
       const responseData = await response.json();
-      console.log("Success response:", responseData); // Debug log
+      console.log("Success response:", responseData);
 
+      // Update previous sessions
       setPreviousSessions((prev) => [
         {
           ...currentSession,
@@ -138,7 +142,17 @@ export const useSessionManager = () => {
       ]);
     } catch (err) {
       console.error("Error saving session:", err);
-      console.error("Full error object:", JSON.stringify(err, null, 2)); // Debug log
+      console.error("Full error object:", JSON.stringify(err, null, 2));
+      setError("Failed to save session: " + (err.message || "Network error"));
+    } finally {
+      // Clean up all session-related state
+      setCurrentSession(null);
+      setTimeSeriesData({
+        speed: [],
+        cadence: [],
+        heartRate: [],
+        resistance: [],
+      });
     }
   };
 
