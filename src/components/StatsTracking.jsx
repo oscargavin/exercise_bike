@@ -99,12 +99,6 @@ const StatsTracking = ({ sessions, userName }) => {
       }),
     }).catch(error => {
       console.error('Failed to update insights preference:', error);
-      // Optionally revert the change if the server update fails
-      // setShowInsights(prev => !prev);
-      // updateUser({
-      //   ...user,
-      //   show_insights: showInsights
-      // });
     });
   };
   return (
@@ -235,7 +229,7 @@ const StatsTracking = ({ sessions, userName }) => {
                   <Line
                     type="monotone"
                     dataKey="resistance"
-                    name="Resistance (%)"
+                    name="Resistance"
                     stroke="#ef4444"
                     strokeWidth={2}
                   />
