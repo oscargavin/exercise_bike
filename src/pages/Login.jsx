@@ -123,28 +123,6 @@ const Login = () => {
               </div>
             )}
           </button>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#1f2937] text-gray-400">or</span>
-            </div>
-          </div>
-
-          {/* Social login buttons */}
-          <div className="grid grid-cols-3 gap-3">
-            <button className="flex justify-center items-center p-2 border border-gray-700 rounded-xl hover:bg-gray-800/50 transition-colors">
-              <img src="/google.svg" alt="Google" className="h-5 w-5" />
-            </button>
-            <button className="flex justify-center items-center p-2 border border-gray-700 rounded-xl hover:bg-gray-800/50 transition-colors">
-              <img src="/apple.svg" alt="Apple" className="h-5 w-5" />
-            </button>
-            <button className="flex justify-center items-center p-2 border border-gray-700 rounded-xl hover:bg-gray-800/50 transition-colors">
-              <img src="/facebook.svg" alt="Facebook" className="h-5 w-5" />
-            </button>
-          </div>
         </form>
 
         <p className="mt-8 text-center text-sm text-gray-400">
