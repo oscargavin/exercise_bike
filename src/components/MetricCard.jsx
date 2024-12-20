@@ -60,7 +60,7 @@ const MetricChart = ({
         stroke="#4B5563"
       />
       <YAxis
-        domain={isHeartRate ? [30, 200] : isResistance ? [0, 100] : ['auto', 'auto']}
+        domain={isHeartRate ? [30, 200] : isResistance ? [0, 24] : ['auto', 'auto']}
         unit={unit}
         tick={{ fontSize: 12, fill: '#9CA3AF' }}
         stroke="#4B5563"

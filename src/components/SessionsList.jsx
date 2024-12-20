@@ -56,7 +56,7 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
         <div className="bg-gray-800/50 rounded-lg p-3 sm:p-4">
           <div className="text-xs sm:text-sm text-gray-400">Avg Resistance</div>
           <div className="text-lg sm:text-xl font-bold text-white mt-0.5">
-            {safeFixed(overallStats.avgResistance)}%
+            {safeFixed(stats.avgResistance)}
           </div>
         </div>
         <div className="bg-gray-800/50 rounded-lg p-3 sm:p-4">
@@ -139,7 +139,7 @@ const SessionsList = ({ sessions, selectedSession, onSelectSession }) => {
                 <div>
                   <div className="text-xs sm:text-sm text-gray-400">Resistance</div>
                   <div className="text-sm sm:text-base font-medium text-white mt-0.5">
-                    {safeFixed(stats.avgResistance)}%
+                    {safeFixed(stats.avgResistance)}
                   </div>
                 </div>
                 <div>

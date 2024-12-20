@@ -35,7 +35,7 @@ export const processBluetoothData = (value) => {
   return {
     speed: data.speed <= 50 ? data.speed : 0,
     cadence: data.cadence <= 150 ? data.cadence : 0,
-    resistance: data.resistance <= 100 ? data.resistance : 0,
+    resistance: data.resistance <= 24 ? data.resistance : 0,
   };
 };
 
