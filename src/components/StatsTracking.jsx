@@ -265,28 +265,28 @@ const StatsTracking = ({ sessions, userName }) => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gray-800/70 rounded-lg p-4">
-                  <div className="text-sm text-gray-400">Speed Ranking</div>
+                  <div className="text-sm text-gray-400">Speed</div>
                   <div className="text-xl font-bold text-white">
                     {percentileRankings.speed}%
                   </div>
                   <div className="text-xs text-gray-500">percentile</div>
                 </div>
                 <div className="bg-gray-800/70 rounded-lg p-4">
-                  <div className="text-sm text-gray-400">Resistance Ranking</div>
+                  <div className="text-sm text-gray-400">Resistance</div>
                   <div className="text-xl font-bold text-white">
                     {percentileRankings.resistance}%
                   </div>
                   <div className="text-xs text-gray-500">percentile</div>
                 </div>
                 <div className="bg-gray-800/70 rounded-lg p-4">
-                  <div className="text-sm text-gray-400">Cadence Ranking</div>
+                  <div className="text-sm text-gray-400">Cadence</div>
                   <div className="text-xl font-bold text-white">
                     {percentileRankings.cadence}%
                   </div>
                   <div className="text-xs text-gray-500">percentile</div>
                 </div>
                 <div className="bg-gray-800/70 rounded-lg p-4">
-                  <div className="text-sm text-gray-400">Heart Rate Ranking</div>
+                  <div className="text-sm text-gray-400">Heart Rate</div>
                   <div className="text-xl font-bold text-white">
                     {percentileRankings.heartRate}%
                   </div>
