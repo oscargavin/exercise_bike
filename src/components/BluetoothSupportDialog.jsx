@@ -7,9 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { Info, ExternalLink, X } from 'lucide-react';
+import { Info, ExternalLink } from 'lucide-react';
 import { detectEnvironment } from '../utils/environment';
 
 // Hook for managing Bluetooth dialog state
@@ -110,14 +109,8 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="bg-gray-900 border-gray-800">
-        <AlertDialogCancel 
-          className="absolute right-4 top-4 p-1 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-800/50"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </AlertDialogCancel>
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-lg text-white pr-6">
+          <AlertDialogTitle className="text-lg text-white">
             {content.title}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-gray-400">
