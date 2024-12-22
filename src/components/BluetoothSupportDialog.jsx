@@ -7,7 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../components/ui/alert-dialog";
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { Info, ExternalLink, X } from 'lucide-react';
 import { detectEnvironment } from '../utils/environment';
 
@@ -69,7 +70,7 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
         showExternalLinkIcon: true
       };
     }
-
+    
     if (!hasWebBluetooth) {
       return {
         title: "Bluetooth Not Supported",
@@ -106,13 +107,17 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
 
   const content = getDialogContent();
 
-  if (!isOpen) return null; // Prevent rendering if not open
-
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="bg-gray-900 border-gray-800 relative">
+      <AlertDialogContent className="bg-gray-900 border-gray-800">
+        <AlertDialogCancel 
+          className="absolute right-4 top-4 p-1 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-800/50"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </AlertDialogCancel>
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-lg text-white">
+          <AlertDialogTitle className="text-lg text-white pr-6">
             {content.title}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-gray-400">
@@ -125,17 +130,11 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
             className="bg-blue-500 hover:bg-blue-600 text-white"
           >
             {content.actionText}
-            {content.showExternalLinkIcon && <ExternalLink className="w-4 h-4 ml-2" />}
+            {content.showExternalLinkIcon && (
+              <ExternalLink className="w-4 h-4 ml-2" />
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
-        <button
-          type="button"
-          aria-label="Close Dialog"
-          className="absolute top-4 right-4 p-2 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          onClick={onClose}
-        >
-          <X className="w-6 h-6 text-white" />
-        </button>
       </AlertDialogContent>
     </AlertDialog>
   );
