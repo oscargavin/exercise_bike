@@ -109,31 +109,31 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="bg-gray-900 border-gray-800">
-        <AlertDialogCancel 
-          className="absolute right-4 top-4 p-1 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-800/50"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </AlertDialogCancel>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-lg text-white pr-6">
+      <AlertDialogContent className="relative overflow-hidden bg-[#1f2937]/90 backdrop-blur-sm border border-gray-800 p-6 shadow-xl max-w-lg mx-4 rounded-2xl">
+        <AlertDialogHeader className="space-y-4">
+          <AlertDialogTitle className="text-xl text-white">
             {content.title}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-gray-400">
             {content.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter className="mt-6 !flex-row space-x-2">
           <AlertDialogAction
             onClick={content.onAction}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
+            className="flex-1 flex items-center justify-center px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-all duration-200"
           >
             {content.actionText}
             {content.showExternalLinkIcon && (
               <ExternalLink className="w-4 h-4 ml-2" />
             )}
           </AlertDialogAction>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-gray-300 font-medium rounded-xl transition-colors"
+          >
+            Cancel
+          </button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
