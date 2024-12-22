@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "../components/ui/alert-dialog";
 import { Info, ExternalLink } from 'lucide-react';
 import { detectEnvironment } from '../utils/environment';
 
