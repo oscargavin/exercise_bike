@@ -7,12 +7,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogCancel,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Info, ExternalLink, X } from 'lucide-react';
+import { Info, ExternalLink } from 'lucide-react';
 import { detectEnvironment } from '../utils/environment';
 
-// Hook for managing Bluetooth dialog state
 export const useBluetoothDialog = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const env = detectEnvironment();
