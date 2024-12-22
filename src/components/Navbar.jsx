@@ -20,7 +20,8 @@ const NavBar = ({
   onConnectHeartRate,
   handleDisconnect,
   startNewSession,
-  endSession
+  endSession,
+  currentHeartRate
 }) => {
   const { isDialogOpen, showDialog, hideDialog, environment } = useBluetoothDialog();
   
@@ -83,9 +84,9 @@ const NavBar = ({
                 />
                 <div className="flex items-baseline space-x-1">
                   <span className={`text-sm ${isHeartRateConnected ? 'text-red-500' : 'text-gray-400'}`}>
-                    {isHeartRateConnected ? (
+                    {isHeartRateConnected && currentHeartRate ? (
                       <>
-                        <span className="font-medium">{currentHeartRate || '...'}</span>
+                        <span className="font-medium">{currentHeartRate}</span>
                         <span className="text-xs text-gray-400 ml-1">bpm</span>
                       </>
                     ) : (

@@ -91,24 +91,28 @@ const Dashboard = () => {
     };
   };
 
+  // Calculate current heart rate
   const currentHeartRate = timeSeriesData?.heartRate?.length > 0 
     ? Math.round(timeSeriesData.heartRate[timeSeriesData.heartRate.length - 1].value)
     : null;
-    
+
+  // Make sure we pass currentHeartRate to Navbar
+  const navbarProps = {
+    isBikeConnected,
+    isHeartRateConnected,
+    deviceInfo: connectedDevices[DEVICE_TYPES.BIKE],
+    isSessionActive,
+    onConnectBike: () => connectToDevice(DEVICE_TYPES.BIKE),
+    onConnectHeartRate: () => connectToDevice(DEVICE_TYPES.HEART_RATE),
+    handleDisconnect,
+    startNewSession,
+    endSession,
+    currentHeartRate
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
-      <Navbar
-        isBikeConnected={isBikeConnected}
-        isHeartRateConnected={isHeartRateConnected}
-        deviceInfo={connectedDevices[DEVICE_TYPES.BIKE]}
-        isSessionActive={isSessionActive}
-        onConnectBike={() => connectToDevice(DEVICE_TYPES.BIKE)}
-        onConnectHeartRate={() => connectToDevice(DEVICE_TYPES.HEART_RATE)}
-        handleDisconnect={handleDisconnect}
-        startNewSession={startNewSession}
-        endSession={endSession}
-        currentHeartRate={currentHeartRate} 
-      />
+      <Navbar {...navbarProps} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {previousSessions.length > 0 && (
@@ -173,7 +177,7 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-
+        
         {/* Previous Sessions with loading state */}
         <div className="bg-gray-800/50 border-gray-700 rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
