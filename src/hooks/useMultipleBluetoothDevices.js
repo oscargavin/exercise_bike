@@ -143,7 +143,10 @@ export const useMultipleBluetoothDevices = (
         ...prev,
         [deviceType]: false,
       }));
-      throw error;
+      // Don't throw the error if user cancelled
+      if (error.name !== "NotFoundError") {
+        throw error;
+      }
     }
   };
 
