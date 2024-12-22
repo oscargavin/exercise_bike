@@ -7,9 +7,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Adjust path as needed
+} from "../components/ui/alert-dialog";
 import { Info, ExternalLink, X } from 'lucide-react';
-import { detectEnvironment } from '../utils/environment'; // Adjust path as needed
+import { detectEnvironment } from '../utils/environment';
 
 // Hook for managing Bluetooth dialog state
 export const useBluetoothDialog = () => {
