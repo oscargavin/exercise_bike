@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -7,8 +7,30 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "./ui/alert-dialog";
-import { Info, ExternalLink } from "lucide-react";
+} from "@/components/ui/alert-dialog";
+import { Info, ExternalLink } from 'lucide-react';
+import { detectEnvironment } from '../utils/environment';
+
+// Hook for managing Bluetooth dialog state
+export const useBluetoothDialog = () => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const env = detectEnvironment();
+
+  const showDialog = useCallback(() => {
+    setIsDialogOpen(true);
+  }, []);
+
+  const hideDialog = useCallback(() => {
+    setIsDialogOpen(false);
+  }, []);
+
+  return {
+    isDialogOpen,
+    showDialog,
+    hideDialog,
+    environment: env
+  };
+};
 
 const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
   const { isIOS, isBluefy, hasWebBluetooth } = environment;
@@ -20,8 +42,7 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
         description: (
           <div className="space-y-4">
             <p>
-              Your current browser doesn't support Bluetooth connectivity. To
-              use this feature on your iOS device, you have two options:
+              Your current browser doesn't support Bluetooth connectivity. To use this feature on your iOS device, you have two options:
             </p>
             <div className="space-y-2">
               <div className="flex items-start space-x-2">
@@ -39,62 +60,47 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
             </div>
             <div className="flex items-center space-x-2 text-sm p-3 rounded-lg bg-blue-500/10 text-blue-400">
               <Info className="w-4 h-4 flex-shrink-0" />
-              <p>
-                Bluefy is a specialized browser that enables Bluetooth
-                connectivity on iOS devices.
-              </p>
+              <p>Bluefy is a specialized browser that enables Bluetooth connectivity on iOS devices.</p>
             </div>
           </div>
         ),
         actionText: "Open App Store",
-        onAction: () =>
-          window.open(
-            "https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055",
-            "_blank"
-          ),
-        showExternalLinkIcon: true,
+        onAction: () => window.open('https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055', '_blank'),
+        showExternalLinkIcon: true
       };
     }
-
+    
     if (!hasWebBluetooth) {
       return {
         title: "Bluetooth Not Supported",
         description: (
           <div className="space-y-4">
             <p>
-              Your browser doesn't support the Web Bluetooth API. To use this
-              feature, please:
+              Your browser doesn't support the Web Bluetooth API. To use this feature, please:
             </p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>
-                Use Google Chrome, Microsoft Edge, or another Chromium-based
-                browser
-              </li>
+              <li>Use Google Chrome, Microsoft Edge, or another Chromium-based browser</li>
               <li>Make sure you're using the latest version of your browser</li>
               <li>Check that Bluetooth is enabled on your device</li>
             </ul>
             <div className="flex items-center space-x-2 text-sm p-3 rounded-lg bg-yellow-500/10 text-yellow-400">
               <Info className="w-4 h-4 flex-shrink-0" />
-              <p>
-                Safari on macOS currently doesn't support Web Bluetooth. Please
-                use Chrome or Edge instead.
-              </p>
+              <p>Safari on macOS currently doesn't support Web Bluetooth. Please use Chrome or Edge instead.</p>
             </div>
           </div>
         ),
         actionText: "Download Chrome",
-        onAction: () => window.open("https://www.google.com/chrome/", "_blank"),
-        showExternalLinkIcon: true,
+        onAction: () => window.open('https://www.google.com/chrome/', '_blank'),
+        showExternalLinkIcon: true
       };
     }
 
     return {
       title: "Bluetooth Error",
-      description:
-        "Unable to connect to Bluetooth. Please make sure Bluetooth is enabled on your device and try again.",
+      description: "Unable to connect to Bluetooth. Please make sure Bluetooth is enabled on your device and try again.",
       actionText: "OK",
       onAction: onClose,
-      showExternalLinkIcon: false,
+      showExternalLinkIcon: false
     };
   };
 
