@@ -7,11 +7,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"; // Adjust path as needed
 import { Info, ExternalLink } from 'lucide-react';
-import { detectEnvironment } from '../utils/environment';
+import { detectEnvironment } from '../utils/environment'; // Adjust path as needed
 
+// Hook for managing Bluetooth dialog state
 export const useBluetoothDialog = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const env = detectEnvironment();
@@ -69,7 +69,7 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
         showExternalLinkIcon: true
       };
     }
-    
+
     if (!hasWebBluetooth) {
       return {
         title: "Bluetooth Not Supported",
@@ -107,33 +107,44 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
   const content = getDialogContent();
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="relative overflow-hidden bg-[#1f2937]/90 backdrop-blur-sm border border-gray-800 p-6 shadow-xl max-w-lg mx-4 rounded-2xl">
-        <AlertDialogHeader className="space-y-4">
-          <AlertDialogTitle className="text-xl text-white">
+    <AlertDialog open={isOpen} onClose={onClose}>
+      <AlertDialogContent className="bg-gray-900 border-gray-800 relative"> {/* Added relative positioning */}
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-lg text-white">
             {content.title}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-gray-400">
             {content.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="mt-6 !flex-row space-x-2">
+        <AlertDialogFooter>
           <AlertDialogAction
             onClick={content.onAction}
-            className="flex-1 flex items-center justify-center px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-all duration-200"
+            className="bg-blue-500 hover:bg-blue-600 text-white"
           >
             {content.actionText}
             {content.showExternalLinkIcon && (
               <ExternalLink className="w-4 h-4 ml-2" />
             )}
           </AlertDialogAction>
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-gray-300 font-medium rounded-xl transition-colors"
-          >
-            Cancel
-          </button>
         </AlertDialogFooter>
+        {/* Close Button */}
+        <button
+          type="button"
+          aria-label="Close Dialog"
+          className="absolute top-4 right-4 p-2 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          onClick={onClose}
+        >
+          <svg
+            className="w-6 h-6 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </AlertDialogContent>
     </AlertDialog>
   );
