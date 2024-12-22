@@ -1,4 +1,3 @@
-// src/hooks/useMultipleBluetoothDevices.js
 import { useState, useCallback } from "react";
 import {
   BLUETOOTH_SERVICES,
@@ -86,6 +85,7 @@ export const useMultipleBluetoothDevices = (
             }
           }
         } catch (e) {
+          // Fallback to CSC service if fitness machine service is not available
           const service = await server.getPrimaryService(
             BLUETOOTH_SERVICES.CYCLING_SPEED_CADENCE
           );

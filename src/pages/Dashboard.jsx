@@ -91,6 +91,10 @@ const Dashboard = () => {
     };
   };
 
+  const currentHeartRate = timeSeriesData.heartRate.length > 0 
+  ? Math.round(timeSeriesData.heartRate[timeSeriesData.heartRate.length - 1].value)
+  : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
       <Navbar
@@ -103,6 +107,7 @@ const Dashboard = () => {
         handleDisconnect={handleDisconnect}
         startNewSession={startNewSession}
         endSession={endSession}
+        currentHeartRate={currentHeartRate} 
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
