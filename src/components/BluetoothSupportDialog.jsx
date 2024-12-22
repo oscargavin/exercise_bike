@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"; // Adjust path as needed
-import { Info, ExternalLink } from 'lucide-react';
+import { Info, ExternalLink, X } from 'lucide-react';
 import { detectEnvironment } from '../utils/environment'; // Adjust path as needed
 
 // Hook for managing Bluetooth dialog state
@@ -106,9 +106,11 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
 
   const content = getDialogContent();
 
+  if (!isOpen) return null; // Prevent rendering if not open
+
   return (
-    <AlertDialog open={isOpen} onClose={onClose}>
-      <AlertDialogContent className="bg-gray-900 border-gray-800 relative"> {/* Added relative positioning */}
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent className="bg-gray-900 border-gray-800 relative">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-lg text-white">
             {content.title}
@@ -123,27 +125,16 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
             className="bg-blue-500 hover:bg-blue-600 text-white"
           >
             {content.actionText}
-            {content.showExternalLinkIcon && (
-              <ExternalLink className="w-4 h-4 ml-2" />
-            )}
+            {content.showExternalLinkIcon && <ExternalLink className="w-4 h-4 ml-2" />}
           </AlertDialogAction>
         </AlertDialogFooter>
-        {/* Close Button */}
         <button
           type="button"
           aria-label="Close Dialog"
           className="absolute top-4 right-4 p-2 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           onClick={onClose}
         >
-          <svg
-            className="w-6 h-6 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <X className="w-6 h-6 text-white" />
         </button>
       </AlertDialogContent>
     </AlertDialog>
