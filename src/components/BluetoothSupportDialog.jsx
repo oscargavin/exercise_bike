@@ -114,7 +114,7 @@ const BluetoothSupportDialog = ({ isOpen, onClose, environment }) => {
           className="absolute right-4 top-4 p-1 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-800/50"
           aria-label="Close"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-2" />
         </AlertDialogCancel>
         <AlertDialogHeader>
           <AlertDialogTitle className="text-lg text-white pr-6">
